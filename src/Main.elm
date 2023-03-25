@@ -9,19 +9,20 @@ type alias Model =
     }
 
 
-init : Model
-init =
-    { name = "Elm"
-    }
+init : flags -> ( Model, Cmd Msg )
+init _ =
+    ( { name = "Elm" }
+    , Cmd.none
+    )
 
 
 type Msg
     = NoOp
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update NoOp model =
-    model
+    ( model, Cmd.none )
 
 
 greet : String -> String
@@ -29,14 +30,21 @@ greet name =
     "Hello, " ++ name ++ "!"
 
 
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
+
+
 view : Model -> Html Msg
 view model =
     text <| greet model.name
 
 
+main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
         , update = update
+        , subscriptions = subscriptions
         , view = view
         }

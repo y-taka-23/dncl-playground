@@ -2,11 +2,11 @@
   "name": "dncl-playground",
   "version": "1.0.0",
   "description": "",
-  "main": "elm.js",
+  "main": "main.js",
   "scripts": {
-    "build": "elm make src/Main.elm",
+    "build": "elm make src/Main.elm --output main.js",
     "test": "elm-test",
-    "clean": "rm -r elm-stuff && rm -r node_modules && rm elm.js"
+    "clean": "rm -r elm-stuff && rm -r node_modules && rm main.js"
   },
   "author": "",
   "license": "ISC",
