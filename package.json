@@ -1,0 +1,16 @@
+{
+  "name": "dncl-playground",
+  "version": "1.0.0",
+  "description": "",
+  "main": "elm.js",
+  "scripts": {
+    "build": "elm make src/Main.elm",
+    "test": "elm-test",
+    "clean": "rm -r elm-stuff && rm -r node_modules && rm elm.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "elm": "^0.19.1-5"
+  }
+}
