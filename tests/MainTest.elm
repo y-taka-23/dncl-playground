@@ -156,6 +156,10 @@ suite =
                     \_ ->
                         Parser.run arithExp "0 ＋ 1"
                             |> Expect.equal (Result.Ok (Plus (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses 2-string addition" <|
+                    \_ ->
+                        Parser.run arithExp "\"Hello\" ＋ \"World\""
+                            |> Expect.equal (Result.Ok (Plus (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses 2-variable addition" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ＋ kosu1"
@@ -182,6 +186,10 @@ suite =
                     \_ ->
                         Parser.run arithExp "0 － 1"
                             |> Expect.equal (Result.Ok (Minus (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses 2-string subtraction" <|
+                    \_ ->
+                        Parser.run arithExp "\"Hello\" － \"World\""
+                            |> Expect.equal (Result.Ok (Minus (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses 2-variable subtraction" <|
                     \_ ->
                         Parser.run arithExp "kosu0 － kosu1"
@@ -208,6 +216,10 @@ suite =
                     \_ ->
                         Parser.run arithExp "0 × 1"
                             |> Expect.equal (Result.Ok (Times (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses 2-string multiplication" <|
+                    \_ ->
+                        Parser.run arithExp "\"Hello\" × \"World\""
+                            |> Expect.equal (Result.Ok (Times (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses 2-variable multiplication" <|
                     \_ ->
                         Parser.run arithExp "kosu0 × kosu1"
@@ -234,6 +246,10 @@ suite =
                     \_ ->
                         Parser.run arithExp "0 ÷ 1"
                             |> Expect.equal (Result.Ok (Quot (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses 2-string quotient" <|
+                    \_ ->
+                        Parser.run arithExp "\"Hello\" ÷ \"World\""
+                            |> Expect.equal (Result.Ok (Quot (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses 2-variable quotient" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ÷ kosu1"
@@ -260,6 +276,10 @@ suite =
                     \_ ->
                         Parser.run arithExp "0 ％ 1"
                             |> Expect.equal (Result.Ok (Mod (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses 2-string remainder" <|
+                    \_ ->
+                        Parser.run arithExp "\"Hello\" ％ \"World\""
+                            |> Expect.equal (Result.Ok (Mod (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses 2-variable remainder" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ％ kosu1"
@@ -348,6 +368,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ＝ 1"
                             |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses equality of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ＝ \"World\""
+                            |> Expect.equal (Result.Ok (Eq (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses equality of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＝ kosu1"
@@ -366,6 +390,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ≠ 1"
                             |> Expect.equal (Result.Ok (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses inequality of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ≠ \"World\""
+                            |> Expect.equal (Result.Ok (Neq (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses inequality of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≠ kosu1"
@@ -384,6 +412,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ＞ 1"
                             |> Expect.equal (Result.Ok (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than inequation of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ＞ \"World\""
+                            |> Expect.equal (Result.Ok (Gt (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses greater-than inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＞ kosu1"
@@ -402,6 +434,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ≧ 1"
                             |> Expect.equal (Result.Ok (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than-or-equal inequation of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ≧ \"World\""
+                            |> Expect.equal (Result.Ok (Ge (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses greater-than-or-equal inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≧ kosu1"
@@ -420,6 +456,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ≦ 1"
                             |> Expect.equal (Result.Ok (Le (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than-or-equal inequation of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ≦ \"World\""
+                            |> Expect.equal (Result.Ok (Le (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses less-than-or-equal inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≦ kosu1"
@@ -438,6 +478,10 @@ suite =
                     \_ ->
                         Parser.run boolExp "0 ＜ 1"
                             |> Expect.equal (Result.Ok (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than inequation of 2 strings" <|
+                    \_ ->
+                        Parser.run boolExp "\"Hello\" ＜ \"World\""
+                            |> Expect.equal (Result.Ok (Lt (Lit (StringVal "Hello")) (Lit (StringVal "World"))))
                 , test "parses less-than inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＜ kosu1"
