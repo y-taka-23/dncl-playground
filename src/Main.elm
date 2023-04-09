@@ -51,10 +51,10 @@ type ArithExp
 type BoolExp
     = Eq ArithExp ArithExp
     | Neq ArithExp ArithExp
-    | GT ArithExp ArithExp
-    | GE ArithExp ArithExp
-    | LE ArithExp ArithExp
-    | LT ArithExp ArithExp
+    | Gt ArithExp ArithExp
+    | Ge ArithExp ArithExp
+    | Le ArithExp ArithExp
+    | Lt ArithExp ArithExp
     | And BoolExp BoolExp
     | Or BoolExp BoolExp
     | Not BoolExp
@@ -232,6 +232,76 @@ arithVar : Parser ArithExp
 arithVar =
     succeed Var
         |= name
+
+
+boolExp : Parser BoolExp
+boolExp =
+    boolFactor
+        |> andThen (\e -> loop e boolFactorLoop)
+
+
+boolFactorLoop : BoolExp -> Parser (Step BoolExp BoolExp)
+boolFactorLoop acc =
+    oneOf
+        [ succeed (\e -> Loop (And acc e))
+            |. backtrackable blanks
+            |. symbol "かつ"
+            |. blanks
+            |= boolFactor
+        , succeed (\e -> Loop (Or acc e))
+            |. backtrackable blanks
+            |. symbol "または"
+            |. blanks
+            |= boolFactor
+        , succeed (Loop (Not acc))
+            |. backtrackable blanks
+            |. symbol "でない"
+        , succeed ()
+            |> map (\_ -> Done acc)
+        ]
+
+
+boolFactor : Parser BoolExp
+boolFactor =
+    oneOf
+        [ succeed Eq
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "＝"
+            |. blanks
+            |= arithExp
+        , succeed Neq
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "≠"
+            |. blanks
+            |= arithExp
+        , succeed Gt
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "＞"
+            |. blanks
+            |= arithExp
+        , succeed Ge
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "≧"
+            |. blanks
+            |= arithExp
+        , succeed Le
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "≦"
+            |. blanks
+            |= arithExp
+        , succeed Lt
+            |= backtrackable arithExp
+            |. backtrackable blanks
+            |. symbol "＜"
+            |. blanks
+            |= arithExp
+        , parens (lazy (\_ -> boolExp))
+        ]
 
 
 type alias Model =

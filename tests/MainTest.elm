@@ -320,4 +320,292 @@ suite =
                             |> Expect.equal (Result.Ok (Times (Plus (Lit (NumberVal 0)) (Lit (NumberVal 1))) (Lit (NumberVal 2))))
                 ]
             ]
+        , describe "boolExp"
+            [ describe "parens"
+                [ test "parses non-spaced parens" <|
+                    \_ ->
+                        Parser.run boolExp "(0 ＝ 1)"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses redundant non-spaced parens" <|
+                    \_ ->
+                        Parser.run boolExp "((0 ＝ 1))"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses spaced parens" <|
+                    \_ ->
+                        Parser.run boolExp "( 0 ＝ 1 )"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses redundant spaced parens" <|
+                    \_ ->
+                        Parser.run boolExp "( ( 0 ＝ 1 ) )"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "equality"
+                [ test "parses equality of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0＝1"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses equality of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses equality of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ＝ kosu1"
+                            |> Expect.equal (Result.Ok (Eq (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse equality of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 ＝ 2"
+                            |> Expect.equal (Result.Ok (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "inequality"
+                [ test "parses inequality of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0≠1"
+                            |> Expect.equal (Result.Ok (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses inequality of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≠ 1"
+                            |> Expect.equal (Result.Ok (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses inequality of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ≠ kosu1"
+                            |> Expect.equal (Result.Ok (Neq (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse inequality of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≠ 1 ≠ 2"
+                            |> Expect.equal (Result.Ok (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "greater-than"
+                [ test "parses greater-than inequation of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0＞1"
+                            |> Expect.equal (Result.Ok (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than inequation of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＞ 1"
+                            |> Expect.equal (Result.Ok (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than inequation of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ＞ kosu1"
+                            |> Expect.equal (Result.Ok (Gt (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse greater-than inequation of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＞ 1 ＞ 2"
+                            |> Expect.equal (Result.Ok (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "greater-than-or-equal"
+                [ test "parses greater-than-or-equal inequation of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0≧1"
+                            |> Expect.equal (Result.Ok (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than-or-equal inequation of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≧ 1"
+                            |> Expect.equal (Result.Ok (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses greater-than-or-equal inequation of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ≧ kosu1"
+                            |> Expect.equal (Result.Ok (Ge (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse greater-than-or-equal inequation of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≧ 1 ≧ 2"
+                            |> Expect.equal (Result.Ok (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "less-than-or-equal"
+                [ test "parses less-than-or-equal inequation of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0≦1"
+                            |> Expect.equal (Result.Ok (Le (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than-or-equal inequation of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≦ 1"
+                            |> Expect.equal (Result.Ok (Le (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than-or-equal inequation of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ≦ kosu1"
+                            |> Expect.equal (Result.Ok (Le (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse less-than-or-equal inequation of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ≦ 1 ≦ 2"
+                            |> Expect.equal (Result.Ok (Le (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "less-than"
+                [ test "parses less-than inequation of 2 numbers without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0＜1"
+                            |> Expect.equal (Result.Ok (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than inequation of 2 numbers with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＜ 1"
+                            |> Expect.equal (Result.Ok (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                , test "parses less-than inequation of 2 variables" <|
+                    \_ ->
+                        Parser.run boolExp "kosu0 ＜ kosu1"
+                            |> Expect.equal (Result.Ok (Lt (Var "kosu0") (Var "kosu1")))
+                , test "cannot parse less-than inequation of 3 numbers" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＜ 1 ＜ 2"
+                            |> Expect.equal (Result.Ok (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                ]
+            , describe "conjunction"
+                [ test "parses conjunction of 2 equations without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1かつ2 ＝ 3"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                , test "parses conjunction of 2 equations with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 かつ 2 ＝ 3"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                , test "parses conjunction of 3 equations" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 かつ 2 ＝ 3 かつ 4 ＝ 5"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (And
+                                            (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                        )
+                                        (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                    )
+                                )
+                , test "parses conjunction of 3 equations with explicit associativity" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 かつ (2 ＝ 3 かつ 4 ＝ 5)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (And
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                            (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                        )
+                                    )
+                                )
+                ]
+            , describe "disjunction"
+                [ test "parses disjunction of 2 equations without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1または2 ＝ 3"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                , test "parses disjunction of 2 equations with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 または 2 ＝ 3"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                , test "parses disjunction of 3 equations" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 または 2 ＝ 3 または 4 ＝ 5"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Or
+                                        (Or
+                                            (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                        )
+                                        (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                    )
+                                )
+                , test "parses disjunction of 3 equations with explicit associativity" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 または (2 ＝ 3 または 4 ＝ 5)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Or
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                            (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                        )
+                                    )
+                                )
+                ]
+            , describe "nagation"
+                [ test "parses negation without spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1でない"
+                            |> Expect.equal (Result.Ok (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))))
+                , test "parses negation with spaces" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 でない"
+                            |> Expect.equal (Result.Ok (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))))
+                , test "parses double negation" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 でないでない"
+                            |> Expect.equal (Result.Ok (Not (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))))
+                ]
+            , describe "associativity"
+                [ test "parses conjunction and disjunction as equaly left-associative" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 かつ 2 ＝ 3 または 4 ＝ 5"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Or
+                                        (And
+                                            (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                        )
+                                        (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                    )
+                                )
+                , test "parses disjunction and conjunction as equaly left-associative" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 または 2 ＝ 3 かつ 4 ＝ 5"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (Or
+                                            (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                        )
+                                        (Eq (Lit (NumberVal 4)) (Lit (NumberVal 5)))
+                                    )
+                                )
+                , test "parses conjunction and negation as equaly left-associative" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 かつ 2 ＝ 3 でない"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Not
+                                        (And
+                                            (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                            (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                        )
+                                    )
+                                )
+                , test "parses negation and conjunction as equaly left-associative" <|
+                    \_ ->
+                        Parser.run boolExp "0 ＝ 1 でないかつ 2 ＝ 3"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (And
+                                        (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                                        (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                ]
+            ]
         ]
