@@ -40,7 +40,7 @@ type Value
 
 type ArithExp
     = Lit Value
-    | Var Name
+    | Var Variable
     | Plus ArithExp ArithExp
     | Minus ArithExp ArithExp
     | Times ArithExp ArithExp
@@ -65,9 +65,9 @@ type alias Procedure =
 
 
 type Statement
-    = Assign Name ArithExp
-    | Increment Name ArithExp
-    | Decrement Name ArithExp
+    = Assign Variable ArithExp
+    | Increment Variable ArithExp
+    | Decrement Variable ArithExp
     | If BoolExp Procedure
     | IfElse BoolExp Procedure Procedure
     | PreLoop BoolExp Procedure Procedure
@@ -231,7 +231,7 @@ arithLit =
 arithVar : Parser ArithExp
 arithVar =
     succeed Var
-        |= name
+        |= variable_
 
 
 boolExp : Parser BoolExp
@@ -302,6 +302,49 @@ boolFactor =
             |= arithExp
         , parens (lazy (\_ -> boolExp))
         ]
+
+
+statement : Parser Statement
+statement =
+    oneOf
+        [ assign
+        , increment
+        , decrement
+        ]
+
+
+assign : Parser Statement
+assign =
+    succeed Assign
+        |= backtrackable variable_
+        |. backtrackable blanks
+        |. symbol "←"
+        |. blanks
+        |= arithExp
+
+
+increment : Parser Statement
+increment =
+    succeed Increment
+        |= backtrackable variable_
+        |. backtrackable blanks
+        |. backtrackable (symbol "を")
+        |. backtrackable blanks
+        |= backtrackable arithExp
+        |. backtrackable blanks
+        |. symbol "増やす"
+
+
+decrement : Parser Statement
+decrement =
+    succeed Decrement
+        |= backtrackable variable_
+        |. backtrackable blanks
+        |. backtrackable (symbol "を")
+        |. backtrackable blanks
+        |= backtrackable arithExp
+        |. backtrackable blanks
+        |. symbol "減らす"
 
 
 type alias Model =

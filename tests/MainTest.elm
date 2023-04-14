@@ -127,7 +127,7 @@ suite =
                 [ test "parses a single variable" <|
                     \_ ->
                         Parser.run arithExp "kosu"
-                            |> Expect.equal (Result.Ok (Var "kosu"))
+                            |> Expect.equal (Result.Ok (Var (Variable "kosu")))
                 ]
             , describe "parens"
                 [ test "parses non-spaced parens" <|
@@ -163,7 +163,7 @@ suite =
                 , test "parses 2-variable addition" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ＋ kosu1"
-                            |> Expect.equal (Result.Ok (Plus (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Plus (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "parses 3-number addition without spaces" <|
                     \_ ->
                         Parser.run arithExp "0＋1＋2"
@@ -193,7 +193,7 @@ suite =
                 , test "parses 2-variable subtraction" <|
                     \_ ->
                         Parser.run arithExp "kosu0 － kosu1"
-                            |> Expect.equal (Result.Ok (Minus (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Minus (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "parses 3-number subtraction without spaces" <|
                     \_ ->
                         Parser.run arithExp "0－1－2"
@@ -223,7 +223,7 @@ suite =
                 , test "parses 2-variable multiplication" <|
                     \_ ->
                         Parser.run arithExp "kosu0 × kosu1"
-                            |> Expect.equal (Result.Ok (Times (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Times (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "parses 3-number multiplication without spaces" <|
                     \_ ->
                         Parser.run arithExp "0×1×2"
@@ -253,7 +253,7 @@ suite =
                 , test "parses 2-variable quotient" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ÷ kosu1"
-                            |> Expect.equal (Result.Ok (Quot (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Quot (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "parses 3-number quotient without spaces" <|
                     \_ ->
                         Parser.run arithExp "0÷1÷2"
@@ -283,7 +283,7 @@ suite =
                 , test "parses 2-variable remainder" <|
                     \_ ->
                         Parser.run arithExp "kosu0 ％ kosu1"
-                            |> Expect.equal (Result.Ok (Mod (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Mod (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "parses 3-number remainder without spaces" <|
                     \_ ->
                         Parser.run arithExp "0％1％2"
@@ -375,7 +375,7 @@ suite =
                 , test "parses equality of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＝ kosu1"
-                            |> Expect.equal (Result.Ok (Eq (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Eq (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse equality of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ＝ 1 ＝ 2"
@@ -397,7 +397,7 @@ suite =
                 , test "parses inequality of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≠ kosu1"
-                            |> Expect.equal (Result.Ok (Neq (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Neq (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse inequality of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ≠ 1 ≠ 2"
@@ -419,7 +419,7 @@ suite =
                 , test "parses greater-than inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＞ kosu1"
-                            |> Expect.equal (Result.Ok (Gt (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Gt (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse greater-than inequation of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ＞ 1 ＞ 2"
@@ -441,7 +441,7 @@ suite =
                 , test "parses greater-than-or-equal inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≧ kosu1"
-                            |> Expect.equal (Result.Ok (Ge (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Ge (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse greater-than-or-equal inequation of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ≧ 1 ≧ 2"
@@ -463,7 +463,7 @@ suite =
                 , test "parses less-than-or-equal inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ≦ kosu1"
-                            |> Expect.equal (Result.Ok (Le (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Le (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse less-than-or-equal inequation of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ≦ 1 ≦ 2"
@@ -485,7 +485,7 @@ suite =
                 , test "parses less-than inequation of 2 variables" <|
                     \_ ->
                         Parser.run boolExp "kosu0 ＜ kosu1"
-                            |> Expect.equal (Result.Ok (Lt (Var "kosu0") (Var "kosu1")))
+                            |> Expect.equal (Result.Ok (Lt (Var (Variable "kosu0")) (Var (Variable "kosu1"))))
                 , test "cannot parse less-than inequation of 3 numbers" <|
                     \_ ->
                         Parser.run boolExp "0 ＜ 1 ＜ 2"
@@ -648,6 +648,110 @@ suite =
                                     (And
                                         (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
                                         (Eq (Lit (NumberVal 2)) (Lit (NumberVal 3)))
+                                    )
+                                )
+                ]
+            ]
+        , describe "statement"
+            [ describe "assign"
+                [ test "parses assignment statement without spaces" <|
+                    \_ ->
+                        Parser.run statement "kosu←3"
+                            |> Expect.equal (Result.Ok (Assign (Variable "kosu") (Lit (NumberVal 3))))
+                , test "parses assignment statement with spaces" <|
+                    \_ ->
+                        Parser.run statement "kosu ← 3"
+                            |> Expect.equal (Result.Ok (Assign (Variable "kosu") (Lit (NumberVal 3))))
+                , test "parses assignment statement for compound expressions without spaces" <|
+                    \_ ->
+                        Parser.run statement "tokuten←kosu×(kosu＋1)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Assign
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                , test "parses assignment statement for compound expressions with spaces" <|
+                    \_ ->
+                        Parser.run statement "tokuten ← kosu × (kosu ＋ 1)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Assign
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                ]
+            , describe "increment"
+                [ test "parses increment statement without spaces" <|
+                    \_ ->
+                        Parser.run statement "kosuを1増やす"
+                            |> Expect.equal (Result.Ok (Increment (Variable "kosu") (Lit (NumberVal 1))))
+                , test "parses increment statement with spaces" <|
+                    \_ ->
+                        Parser.run statement "kosu を 1 増やす"
+                            |> Expect.equal (Result.Ok (Increment (Variable "kosu") (Lit (NumberVal 1))))
+                , test "parses increment statement for compound expressions without spaces" <|
+                    \_ ->
+                        Parser.run statement "tokutenをkosu×(kosu＋1)増やす"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Increment
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                , test "parses increment statement for compound expressions with spaces" <|
+                    \_ ->
+                        Parser.run statement "tokuten を kosu × (kosu ＋ 1) 増やす"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Increment
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                ]
+            , describe "decrement"
+                [ test "parses increment statement without spaces" <|
+                    \_ ->
+                        Parser.run statement "kosuを1減らす"
+                            |> Expect.equal (Result.Ok (Decrement (Variable "kosu") (Lit (NumberVal 1))))
+                , test "parses increment statement with spaces" <|
+                    \_ ->
+                        Parser.run statement "kosu を 1 減らす"
+                            |> Expect.equal (Result.Ok (Decrement (Variable "kosu") (Lit (NumberVal 1))))
+                , test "parses increment statement for compound expressions without spaces" <|
+                    \_ ->
+                        Parser.run statement "tokutenをkosu×(kosu＋1)減らす"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Decrement
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                , test "parses increment statement for compound expressions with spaces" <|
+                    \_ ->
+                        Parser.run statement "tokuten を kosu × (kosu ＋ 1) 減らす"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Decrement
+                                        (Variable "tokuten")
+                                        (Times (Var (Variable "kosu"))
+                                            (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
                                     )
                                 )
                 ]
