@@ -70,8 +70,8 @@ type Statement
     | Decrement Variable ArithExp
     | If BoolExp Procedure
     | IfElse BoolExp Procedure Procedure
-    | PreLoop BoolExp Procedure Procedure
-    | PostLoop Procedure BoolExp
+    | PreCheckLoop BoolExp Procedure
+    | PostCheckLoop Procedure BoolExp
 
 
 type alias DNCLProgram =
@@ -326,6 +326,8 @@ blockStatement =
     oneOf
         [ if_
         , ifElse
+        , preCheckLoop
+        , postCheckLoop
         ]
 
 
@@ -432,6 +434,34 @@ ifElse =
         |. line (symbol "を実行し，そうでなければ")
         |= procedure
         |. line (symbol "を実行する")
+
+
+preCheckLoop : Parser Statement
+preCheckLoop =
+    succeed PreCheckLoop
+        |= line
+            (succeed identity
+                |= boolExp
+                |. blanks
+                |. symbol "の間，"
+            )
+        |= procedure
+        |. line (symbol "を繰り返す")
+
+
+postCheckLoop : Parser Statement
+postCheckLoop =
+    succeed PostCheckLoop
+        |. line (symbol "繰り返し，")
+        |= procedure
+        |= line
+            (succeed identity
+                |. symbol "を，"
+                |. blanks
+                |= boolExp
+                |. blanks
+                |. symbol "になるまで実行する"
+            )
 
 
 type alias Model =

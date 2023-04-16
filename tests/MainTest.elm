@@ -1025,5 +1025,239 @@ suite =
                                     )
                                 )
                 ]
+            , describe "preCheckLoop"
+                [ test "parses pre-check loop with empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10))) []))
+                , test "parses pre-check loop with a blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10))) []))
+                , test "parses pre-check loop with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10))) []))
+                , test "parses pre-check loop with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                    gokei ← gokei ＋ x
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x"))) ]
+                                    )
+                                )
+                , test "parses pre-check loop with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses pre-check loop with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses pre-check loop with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                    gokei ← gokei ＋ x
+
+                                    x ← x ＋ 1
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses pre-check loop with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses pre-check loop with a nested pre-check loop" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x ＜ 10 の間，
+                                    y ＜ 10 の間，
+                                    を繰り返す
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 10)))
+                                        [ PreCheckLoop (Lt (Var (Variable "y")) (Lit (NumberVal 10))) [] ]
+                                    )
+                                )
+                ]
+            , describe "postCheckLoop"
+                [ test "parses post-check loop with empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok (PostCheckLoop [] (Ge (Var (Variable "x")) (Lit (NumberVal 10)))))
+                , test "parses post-check loop with a single blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok (PostCheckLoop [] (Ge (Var (Variable "x")) (Lit (NumberVal 10)))))
+                , test "parses post-check loop with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+
+
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok (PostCheckLoop [] (Ge (Var (Variable "x")) (Lit (NumberVal 10)))))
+                , test "parses post-check loop with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                    gokei ← gokei ＋ x
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x"))) ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                , test "parses post-check loop with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                , test "parses post-check loop with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                , test "parses post-check loop with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                    gokei ← gokei ＋ x
+
+                                    x ← x ＋ 1
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                , test "parses post-check loop with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                    gokei ← gokei ＋ x
+                                    x ← x ＋ 1
+
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ Assign (Variable "gokei") (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                , test "parses post-check loop with a nested post-check loop" <|
+                    \_ ->
+                        Parser.run statement
+                            """ 繰り返し，
+                                    繰り返し，
+                                    を，y ≧ 10 になるまで実行する
+                                を，x ≧ 10 になるまで実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PostCheckLoop
+                                        [ PostCheckLoop [] (Ge (Var (Variable "y")) (Lit (NumberVal 10))) ]
+                                        (Ge (Var (Variable "x")) (Lit (NumberVal 10)))
+                                    )
+                                )
+                ]
             ]
         ]
