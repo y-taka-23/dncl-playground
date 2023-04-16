@@ -3,7 +3,6 @@ module Main exposing (..)
 import Browser
 import Char
 import Html exposing (Html, text)
-import List.Nonempty exposing (Nonempty)
 import Parser
     exposing
         ( (|.)
@@ -13,6 +12,7 @@ import Parser
         , andThen
         , backtrackable
         , chompWhile
+        , end
         , int
         , lazy
         , loop
@@ -61,7 +61,7 @@ type BoolExp
 
 
 type alias Procedure =
-    Nonempty Statement
+    List Statement
 
 
 type Statement
@@ -307,9 +307,25 @@ boolFactor =
 statement : Parser Statement
 statement =
     oneOf
+        [ lineStatement
+        , blockStatement
+        ]
+
+
+lineStatement : Parser Statement
+lineStatement =
+    oneOf
         [ assign
         , increment
         , decrement
+        ]
+
+
+blockStatement : Parser Statement
+blockStatement =
+    oneOf
+        [ if_
+        , ifElse
         ]
 
 
@@ -345,6 +361,77 @@ decrement =
         |= backtrackable arithExp
         |. backtrackable blanks
         |. symbol "減らす"
+
+
+line : Parser a -> Parser a
+line p =
+    succeed identity
+        |. backtrackable blanks
+        |= p
+        |. blanks
+        |. oneOf [ symbol "\n", end ]
+
+
+blankLine : Parser ()
+blankLine =
+    succeed ()
+        |. backtrackable blanks
+        |. oneOf [ symbol "\n", end ]
+
+
+procedure : Parser Procedure
+procedure =
+    loop [] statementLoop
+
+
+statementLoop : Procedure -> Parser (Step Procedure Procedure)
+statementLoop proc =
+    oneOf
+        [ succeed (\stmt -> Loop (stmt :: proc))
+            |= line lineStatement
+        , succeed (\stmt -> Loop (stmt :: proc))
+            |= blockStatement
+        , succeed (Loop proc)
+            |. blankLine
+        , succeed ()
+            |> map (\_ -> Done (List.reverse proc))
+        ]
+
+
+if_ : Parser Statement
+if_ =
+    succeed If
+        |= backtrackable
+            (line
+                (succeed identity
+                    |. symbol "もし"
+                    |. blanks
+                    |= boolExp
+                    |. blanks
+                    |. symbol "ならば"
+                )
+            )
+        |= backtrackable procedure
+        |. line (symbol "を実行する")
+
+
+ifElse : Parser Statement
+ifElse =
+    succeed IfElse
+        |= backtrackable
+            (line
+                (succeed identity
+                    |. symbol "もし"
+                    |. blanks
+                    |= boolExp
+                    |. blanks
+                    |. symbol "ならば"
+                )
+            )
+        |= backtrackable procedure
+        |. line (symbol "を実行し，そうでなければ")
+        |= procedure
+        |. line (symbol "を実行する")
 
 
 type alias Model =

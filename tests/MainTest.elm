@@ -755,5 +755,275 @@ suite =
                                     )
                                 )
                 ]
+            , describe "if"
+                [ test "parses if statement with empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (If (Lt (Var (Variable "x")) (Lit (NumberVal 3))) []))
+                , test "parses if statement with a single blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (If (Lt (Var (Variable "x")) (Lit (NumberVal 3))) []))
+                , test "parses if statement with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (If (Lt (Var (Variable "x")) (Lit (NumberVal 3))) []))
+                , test "parses if statement with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1))) ]
+                                    )
+                                )
+                , test "parses if statement with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                    y ← y － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if statement with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+                                    x ← x ＋ 1
+                                    y ← y － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if statement with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+
+                                    y ← y － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if statement with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                    y ← y － 1
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if statement with nested if" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    もし y ＜ 3 ならば
+                                    を実行する
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ If (Lt (Var (Variable "y")) (Lit (NumberVal 3))) [] ]
+                                    )
+                                )
+                ]
+            , describe "ifElse"
+                [ test "parses if-else statement with empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                を実行し，そうでなければ
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3))) [] []))
+                , test "parses if-else statement with a single blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+                                を実行し，そうでなければ
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3))) [] []))
+                , test "parses if-else statement with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+
+                                を実行し，そうでなければ
+
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3))) [] []))
+                , test "parses if-else statement with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                を実行し，そうでなければ
+                                    y ← y － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1))) ]
+                                        [ Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1))) ]
+                                    )
+                                )
+                , test "parses if-then statement with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                    y ← y － 1
+                                を実行し，そうでなければ
+                                    z ← z ＋ 1
+                                    w ← w － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                        [ Assign (Variable "z") (Plus (Var (Variable "z")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "w") (Minus (Var (Variable "w")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if-else statement with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+
+                                    x ← x ＋ 1
+                                    y ← y － 1
+                                を実行し，そうでなければ
+
+                                    z ← z ＋ 1
+                                    w ← w － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                        [ Assign (Variable "z") (Plus (Var (Variable "z")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "w") (Minus (Var (Variable "w")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if-else statement with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+
+                                    y ← y － 1
+                                を実行し，そうでなければ
+                                    z ← z ＋ 1
+
+                                    w ← w － 1
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                        [ Assign (Variable "z") (Plus (Var (Variable "z")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "w") (Minus (Var (Variable "w")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if-else statement with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    x ← x ＋ 1
+                                    y ← y － 1
+
+                                を実行し，そうでなければ
+                                    z ← z ＋ 1
+                                    w ← w － 1
+
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Variable "x") (Plus (Var (Variable "x")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "y") (Minus (Var (Variable "y")) (Lit (NumberVal 1)))
+                                        ]
+                                        [ Assign (Variable "z") (Plus (Var (Variable "z")) (Lit (NumberVal 1)))
+                                        , Assign (Variable "w") (Minus (Var (Variable "w")) (Lit (NumberVal 1)))
+                                        ]
+                                    )
+                                )
+                , test "parses if-else statement with nested if" <|
+                    \_ ->
+                        Parser.run statement
+                            """ もし x ＜ 3 ならば
+                                    もし y ＜ 3 ならば
+                                    を実行し，そうでなければ
+                                    を実行する
+                                を実行し，そうでなければ
+                                    もし z ＜ 3 ならば
+                                    を実行し，そうでなければ
+                                    を実行する
+                                を実行する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IfElse (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                        [ IfElse (Lt (Var (Variable "y")) (Lit (NumberVal 3))) [] [] ]
+                                        [ IfElse (Lt (Var (Variable "z")) (Lit (NumberVal 3))) [] [] ]
+                                    )
+                                )
+                ]
             ]
         ]
