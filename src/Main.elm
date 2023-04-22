@@ -3,6 +3,7 @@ module Main exposing (..)
 import Browser
 import Char
 import Html exposing (Html, text)
+import List.Nonempty exposing (Nonempty(..))
 import Parser
     exposing
         ( (|.)
@@ -38,6 +39,11 @@ type Value
     | StringVal String
 
 
+type Printable
+    = PrintVal Value
+    | PrintVar Variable
+
+
 type ArithExp
     = Lit Value
     | Var Variable
@@ -66,6 +72,7 @@ type alias Procedure =
 
 type Statement
     = Assign Variable ArithExp
+    | Print (Nonempty Printable)
     | Increment Variable ArithExp
     | Decrement Variable ArithExp
     | If BoolExp Procedure
@@ -316,6 +323,7 @@ lineStatement : Parser Statement
 lineStatement =
     oneOf
         [ assign
+        , print
         , increment
         , decrement
         ]
@@ -339,6 +347,37 @@ assign =
         |. symbol "←"
         |. blanks
         |= arithExp
+
+
+print : Parser Statement
+print =
+    succeed (\p ps -> Print (Nonempty p ps))
+        |= backtrackable printable
+        |= loop [] printableLoop
+
+
+printableLoop : List Printable -> Parser (Step (List Printable) (List Printable))
+printableLoop ps =
+    oneOf
+        [ succeed (\p -> Loop (p :: ps))
+            |. backtrackable blanks
+            |. symbol "と"
+            |. blanks
+            |= printable
+        , succeed (Done (List.reverse ps))
+            |. backtrackable blanks
+            |. symbol "を表示する"
+        ]
+
+
+printable : Parser Printable
+printable =
+    oneOf
+        [ succeed PrintVar
+            |= variable_
+        , succeed PrintVal
+            |= value
+        ]
 
 
 increment : Parser Statement

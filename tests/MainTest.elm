@@ -1,6 +1,7 @@
 module MainTest exposing (suite)
 
 import Expect
+import List.Nonempty exposing (Nonempty(..), singleton)
 import Main exposing (..)
 import Parser
 import Result
@@ -683,6 +684,68 @@ suite =
                                         (Variable "tokuten")
                                         (Times (Var (Variable "kosu"))
                                             (Plus (Var (Variable "kosu")) (Lit (NumberVal 1)))
+                                        )
+                                    )
+                                )
+                ]
+            , describe "print"
+                [ test "parses print statement for a Japanese string value without spaces" <|
+                    \_ ->
+                        Parser.run statement "「整いました」を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "整いました")))))
+                , test "parses print statement for a Japanese string value with spaces" <|
+                    \_ ->
+                        Parser.run statement "「整いました」 を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "整いました")))))
+                , test "parses print statement for an English string value without spaces" <|
+                    \_ ->
+                        Parser.run statement "\"It was found.\"を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "It was found.")))))
+                , test "parses print statement for an English string value with spaces" <|
+                    \_ ->
+                        Parser.run statement "\"It was found.\" を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "It was found.")))))
+                , test "parses print statement for a numeric value without spaces" <|
+                    \_ ->
+                        Parser.run statement "3を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (NumberVal 3)))))
+                , test "parses print statement for a numeric value with spaces" <|
+                    \_ ->
+                        Parser.run statement "3 を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (NumberVal 3)))))
+                , test "parses print statement for a variable without spaces" <|
+                    \_ ->
+                        Parser.run statement "kosuを表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVar (Variable "kosu")))))
+                , test "parses print statement for a variable value with spaces" <|
+                    \_ ->
+                        Parser.run statement "kosu を表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (PrintVar (Variable "kosu")))))
+                , test "parses print statement for 2 items" <|
+                    \_ ->
+                        Parser.run statement "kosu と「個見つかった」を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print
+                                        (Nonempty
+                                            (PrintVar (Variable "kosu"))
+                                            [ PrintVal (StringVal "個見つかった") ]
+                                        )
+                                    )
+                                )
+                , test "parses print statement for multiple items" <|
+                    \_ ->
+                        Parser.run statement "\"(\" と x と \", \" と y と \")\" を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print
+                                        (Nonempty
+                                            (PrintVal (StringVal "("))
+                                            [ PrintVar (Variable "x")
+                                            , PrintVal (StringVal ", ")
+                                            , PrintVar (Variable "y")
+                                            , PrintVal (StringVal ")")
+                                            ]
                                         )
                                     )
                                 )
