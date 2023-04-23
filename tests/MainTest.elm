@@ -1323,4 +1323,105 @@ suite =
                                 )
                 ]
             ]
+        , describe "dnclProgram"
+            [ test "parses the empty procedure" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """"""
+                        |> Expect.equal (Result.Ok [])
+            , test "parses the empty procedure with blank lines" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """
+
+                        """
+                        |> Expect.equal (Result.Ok [])
+            , test "parses a single statement withou blank lines" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ 「こんにちは、世界」を表示する"""
+                        |> Expect.equal (Result.Ok [ Print (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+            , test "parses a single statment with proceding line break" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """
+                            「こんにちは、世界」を表示する"""
+                        |> Expect.equal (Result.Ok [ Print (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+            , test "parses a single statement with succeeding line break" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ 「こんにちは、世界」を表示する
+                        """
+                        |> Expect.equal (Result.Ok [ Print (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+            , test "parses multiple line-statements" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ x ← 42
+                            x を表示する
+                        """
+                        |> Expect.equal
+                            (Result.Ok
+                                [ Assign (Variable "x") (Lit (NumberVal 42))
+                                , Print (Nonempty (PrintVar (Variable "x")) [])
+                                ]
+                            )
+            , test "parses multiple block-statements" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ もし x ＜ 3 ならば
+                                x ← 3
+                            を実行する
+                            もし y ＜ 3 ならば
+                                y ← 3
+                            を実行する
+                        """
+                        |> Expect.equal
+                            (Result.Ok
+                                [ If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                    [ Assign (Variable "x") (Lit (NumberVal 3)) ]
+                                , If (Lt (Var (Variable "y")) (Lit (NumberVal 3)))
+                                    [ Assign (Variable "y") (Lit (NumberVal 3)) ]
+                                ]
+                            )
+            , test "parses a line-statements and a block-statement" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ x ← 0
+                            もし x ＜ 3 ならば
+                                x ← 3
+                            を実行する
+                        """
+                        |> Expect.equal
+                            (Result.Ok
+                                [ Assign (Variable "x") (Lit (NumberVal 0))
+                                , If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                    [ Assign (Variable "x") (Lit (NumberVal 3)) ]
+                                ]
+                            )
+            , test "parses a block-statement and a line-statements" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ もし x ＜ 3 ならば
+                                x ← 3
+                            を実行する
+                            x を表示する
+                        """
+                        |> Expect.equal
+                            (Result.Ok
+                                [ If (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                    [ Assign (Variable "x") (Lit (NumberVal 3)) ]
+                                , Print (Nonempty (PrintVar (Variable "x")) [])
+                                ]
+                            )
+            , test "cannot parse a program with a trailing erroneous fragment" <|
+                \_ ->
+                    Parser.run dnclProgram
+                        """ もし x ＜ 3 ならば
+                                x ← 3
+                            を実行する
+                            x を表示する
+                            err
+                        """
+                        |> Expect.err
+            ]
         ]

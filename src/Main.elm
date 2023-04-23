@@ -417,7 +417,7 @@ blankLine : Parser ()
 blankLine =
     succeed ()
         |. backtrackable blanks
-        |. oneOf [ symbol "\n", end ]
+        |. symbol "\n"
 
 
 procedure : Parser Procedure
@@ -501,6 +501,13 @@ postCheckLoop =
                 |. blanks
                 |. symbol "になるまで実行する"
             )
+
+
+dnclProgram : Parser DNCLProgram
+dnclProgram =
+    loop [] statementLoop
+        |. blanks
+        |. end
 
 
 type alias Model =
