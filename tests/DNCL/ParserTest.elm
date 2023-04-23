@@ -1,23 +1,18 @@
-module MainTest exposing (suite)
+module DNCL.ParserTest exposing (suite)
 
+import DNCL.AST exposing (..)
+import DNCL.Parser exposing (..)
 import Expect
 import List.Nonempty exposing (Nonempty(..), singleton)
-import Main exposing (..)
 import Parser
 import Result
-import Test exposing (Test, describe, test, todo)
+import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "The Main module"
-        [ describe "greet"
-            [ test "appends the name to the message" <|
-                \_ ->
-                    greet "Elm"
-                        |> Expect.equal "Hello, Elm!"
-            ]
-        , describe "variable_"
+    describe "The Parser module"
+        [ describe "variable_"
             [ test "starts with a lowercase" <|
                 \_ ->
                     Parser.run variable_ "kosu"
