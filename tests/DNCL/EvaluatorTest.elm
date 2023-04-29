@@ -369,5 +369,277 @@ suite =
                             ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 ]
+            , describe "if"
+                [ describe "eq"
+                    [ test "evaluates the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluate the then clause if e1 /= e2" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "throws an exception if the left of == is non numeric" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (StringVal "True")) (Lit (NumberVal 0))) []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the right of == is non numeric" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (NumberVal 0)) (Lit (StringVal "True"))) []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the left of == is undefined" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Var (Variable "x")) (Lit (StringVal "True"))) []
+                                ]
+                                |> Expect.equal (Result.Err (UndefinedVariable (Variable "x")))
+                    ]
+                , describe "neq"
+                    [ test "doesn't evaluate the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if e1 /= e2" <|
+                        \_ ->
+                            run
+                                [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    ]
+                , describe "gt"
+                    [ test "doesn't evaluate the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Gt (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if e1 > e2" <|
+                        \_ ->
+                            run
+                                [ If (Gt (Lit (NumberVal 1)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluate the then clause if e1 < e2" <|
+                        \_ ->
+                            run
+                                [ If (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    ]
+                , describe "ge"
+                    [ test "evaluates the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Ge (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "evaluates the then clause if e1 > e2" <|
+                        \_ ->
+                            run
+                                [ If (Ge (Lit (NumberVal 1)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluate the then clause if e1 < e2" <|
+                        \_ ->
+                            run
+                                [ If (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    ]
+                , describe "le"
+                    [ test "evaluates the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Le (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluate the then clause if e1 > e2" <|
+                        \_ ->
+                            run
+                                [ If (Le (Lit (NumberVal 1)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if e1 < e2" <|
+                        \_ ->
+                            run
+                                [ If (Le (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    ]
+                , describe "lt"
+                    [ test "doens't evaluate the then clause if e1 == e2" <|
+                        \_ ->
+                            run
+                                [ If (Lt (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "doesn't evaluate the then clause if e1 > e2" <|
+                        \_ ->
+                            run
+                                [ If (Lt (Lit (NumberVal 1)) (Lit (NumberVal 0)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if e1 < e2" <|
+                        \_ ->
+                            run
+                                [ If (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    ]
+                , describe "and"
+                    [ test "evaluates the then clause if True && True" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doens't evaluate the then clause if False && True" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "doens't evaluate the then clause if True && False" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "doens't evaluate the then clause if False && False" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (And
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    ]
+                , describe "or"
+                    [ test "evaluates the then clause if True || True" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "evaluates the then clause if False || True" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "evaluates the then clause if True || False" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doens't evaluate the then clause if False || False" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Or
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                        (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    )
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    ]
+                , describe "not"
+                    [ test "doesn't evaluate the then clause if the original condition holds" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0))))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if the original condition doesn' hold" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    ]
+                ]
+            , describe "if-else"
+                [ test "evaluate the then clause if the guard condition holds" <|
+                    \_ ->
+                        run
+                            [ IfElse (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
+                                [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                [ Print (singleton (PrintVal (StringVal "False"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "True" ])
+                , test "evaluates the else clause if the guard doesn' hold" <|
+                    \_ ->
+                        run
+                            [ IfElse (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                [ Print (singleton (PrintVal (StringVal "False"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "False" ])
+                ]
             ]
         ]

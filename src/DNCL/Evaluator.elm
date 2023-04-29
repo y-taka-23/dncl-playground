@@ -99,6 +99,29 @@ eval ev =
                     in
                     eval { ev | continuation = stmts, variables = vs }
 
+        -- TODO: List concatination looks show
+        (If bexp thenStmts) :: stmts ->
+            case evalBool ev.variables bexp of
+                Err e ->
+                    Err e
+
+                Ok True ->
+                    eval { ev | continuation = thenStmts ++ stmts }
+
+                Ok False ->
+                    eval { ev | continuation = stmts }
+
+        (IfElse bexp thenStmts elseStmts) :: stmts ->
+            case evalBool ev.variables bexp of
+                Err e ->
+                    Err e
+
+                Ok True ->
+                    eval { ev | continuation = thenStmts ++ stmts }
+
+                Ok False ->
+                    eval { ev | continuation = elseStmts ++ stmts }
+
         _ ->
             Ok []
 
@@ -157,6 +180,37 @@ evalArith vs aexp =
 
                 ( Ok n, Ok m ) ->
                     Ok (modBy m n)
+
+
+evalBool : Variables -> BoolExp -> Result Exception Bool
+evalBool vs bexp =
+    case bexp of
+        Eq e1 e2 ->
+            Result.map2 (==) (evalArith vs e1) (evalArith vs e2)
+
+        Neq e1 e2 ->
+            Result.map2 (/=) (evalArith vs e1) (evalArith vs e2)
+
+        Gt e1 e2 ->
+            Result.map2 (>) (evalArith vs e1) (evalArith vs e2)
+
+        Ge e1 e2 ->
+            Result.map2 (>=) (evalArith vs e1) (evalArith vs e2)
+
+        Le e1 e2 ->
+            Result.map2 (<=) (evalArith vs e1) (evalArith vs e2)
+
+        Lt e1 e2 ->
+            Result.map2 (<) (evalArith vs e1) (evalArith vs e2)
+
+        And e1 e2 ->
+            Result.map2 (&&) (evalBool vs e1) (evalBool vs e2)
+
+        Or e1 e2 ->
+            Result.map2 (||) (evalBool vs e1) (evalBool vs e2)
+
+        Not e ->
+            Result.map not (evalBool vs e)
 
 
 format : Variables -> Nonempty Printable -> Result Exception String
