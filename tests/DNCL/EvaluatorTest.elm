@@ -641,5 +641,70 @@ suite =
                             ]
                             |> Expect.equal (Result.Ok [ "False" ])
                 ]
+            , describe "pre-check loop"
+                [ test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 0)))
+                                [ Print (singleton (PrintVal (StringVal "Loop")))
+                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                ]
+                            ]
+                            |> Expect.equal (Result.Ok [])
+                , test "evaluates the loop contents only once" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 1)))
+                                [ Print (singleton (PrintVal (StringVal "Loop")))
+                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "Loop" ])
+                , test "evaluates the loop contents multiple times" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                                [ Print (singleton (PrintVal (StringVal "Loop")))
+                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "Loop", "Loop", "Loop" ])
+                ]
+            , describe "post-check loop"
+                [ test "evaluates the loop contents even if the condition initially doesn't hold" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PostCheckLoop
+                                [ Print (singleton (PrintVal (StringVal "Loop"))) ]
+                                (Lt (Var (Variable "x")) (Lit (NumberVal 0)))
+                            ]
+                            |> Expect.equal (Result.Ok [ "Loop" ])
+                , test "evaluates the loop contents only twice" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PostCheckLoop
+                                [ Print (singleton (PrintVal (StringVal "Loop")))
+                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                ]
+                                (Lt (Var (Variable "x")) (Lit (NumberVal 2)))
+                            ]
+                            |> Expect.equal (Result.Ok [ "Loop", "Loop" ])
+                , test "evaluates the loop contents multiple times" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            , PostCheckLoop
+                                [ Print (singleton (PrintVal (StringVal "Loop")))
+                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                ]
+                                (Lt (Var (Variable "x")) (Lit (NumberVal 4)))
+                            ]
+                            |> Expect.equal (Result.Ok [ "Loop", "Loop", "Loop", "Loop" ])
+                ]
             ]
         ]

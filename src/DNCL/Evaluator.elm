@@ -122,8 +122,20 @@ eval ev =
                 Ok False ->
                     eval { ev | continuation = elseStmts ++ stmts }
 
-        _ ->
-            Ok []
+        -- TODO: Handle the infinite loop
+        (PreCheckLoop bexp loopStmts) :: stmts ->
+            case evalBool ev.variables bexp of
+                Err e ->
+                    Err e
+
+                Ok True ->
+                    eval { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
+
+                Ok False ->
+                    eval { ev | continuation = stmts }
+
+        (PostCheckLoop loopStmts bexp) :: stmts ->
+            eval { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
 
 evalArith : Variables -> ArithExp -> Result Exception Int
