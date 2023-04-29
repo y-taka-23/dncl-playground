@@ -1,4 +1,11 @@
-module DNCL.Parser exposing (..)
+module DNCL.Parser exposing
+    ( arithExp
+    , boolExp
+    , dnclProgram
+    , statement
+    , value
+    , variable_
+    )
 
 import Char
 import DNCL.AST exposing (..)
