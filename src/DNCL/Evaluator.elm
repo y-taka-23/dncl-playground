@@ -131,18 +131,32 @@ evalArith vs aexp =
             Result.map2 (*) (evalArith vs e1) (evalArith vs e2)
 
         Quot e1 e2 ->
-            if evalArith vs e2 == Ok 0 then
-                Err ZeroDivision
+            case ( evalArith vs e1, evalArith vs e2 ) of
+                ( Err e, _ ) ->
+                    Err e
 
-            else
-                Result.map2 (//) (evalArith vs e1) (evalArith vs e2)
+                ( Ok _, Err e ) ->
+                    Err e
+
+                ( Ok _, Ok 0 ) ->
+                    Err ZeroDivision
+
+                ( Ok n, Ok m ) ->
+                    Ok (n // m)
 
         Mod e1 e2 ->
-            if evalArith vs e2 == Ok 0 then
-                Err ZeroDivision
+            case ( evalArith vs e1, evalArith vs e2 ) of
+                ( Err e, _ ) ->
+                    Err e
 
-            else
-                Result.map2 modBy (evalArith vs e2) (evalArith vs e1)
+                ( Ok _, Err e ) ->
+                    Err e
+
+                ( Ok _, Ok 0 ) ->
+                    Err ZeroDivision
+
+                ( Ok n, Ok m ) ->
+                    Ok (modBy m n)
 
 
 format : Variables -> Nonempty Printable -> Result Exception String

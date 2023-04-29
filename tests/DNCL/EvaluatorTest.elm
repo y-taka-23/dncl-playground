@@ -202,12 +202,12 @@ suite =
                             , Print (singleton (PrintVar (Variable "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
-                , fuzz int "throws an exception if the left of quotient is zero" <|
+                , fuzz int "throws an exception if the right of quotient is zero" <|
                     \n ->
                         run
                             [ Assign (Variable "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
-                , fuzz (pair string nonzero) "throws an exception if the left of quotient is non numeric" <|
+                , fuzz (pair string int) "throws an exception if the left of quotient is non numeric" <|
                     \( s, n ) ->
                         run
                             [ Assign (Variable "x") (Quot (Lit (StringVal s)) (Lit (NumberVal n))) ]
@@ -250,12 +250,12 @@ suite =
                             , Print (singleton (PrintVar (Variable "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
-                , fuzz int "throws an exception if the left of remainder is zero" <|
+                , fuzz int "throws an exception if the right of remainder is zero" <|
                     \n ->
                         run
                             [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
-                , fuzz (pair string nonzero) "throws an exception if the left of remainder is non numeric" <|
+                , fuzz (pair string int) "throws an exception if the left of remainder is non numeric" <|
                     \( s, n ) ->
                         run
                             [ Assign (Variable "x") (Mod (Lit (StringVal s)) (Lit (NumberVal n))) ]
@@ -265,7 +265,7 @@ suite =
                         run
                             [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
-                , fuzz (pair string nonzero) "throws an exception if the left of remainder is undefined" <|
+                , fuzz (pair string int) "throws an exception if the left of remainder is undefined" <|
                     \( y, n ) ->
                         run
                             [ Assign (Variable "x") (Mod (Var (Variable y)) (Lit (NumberVal n))) ]
