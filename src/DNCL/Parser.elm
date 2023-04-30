@@ -2,6 +2,7 @@ module DNCL.Parser exposing
     ( arithExp
     , boolExp
     , dnclProgram
+    , parse
     , statement
     , value
     , variable_
@@ -25,11 +26,22 @@ import Parser
         , loop
         , map
         , oneOf
+        , run
         , succeed
         , symbol
         , variable
         )
 import Set
+
+
+parse : String -> Maybe DNCLProgram
+parse code =
+    case run dnclProgram code of
+        Ok prog ->
+            Just prog
+
+        Err _ ->
+            Nothing
 
 
 variable_ : Parser Variable

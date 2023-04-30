@@ -1,4 +1,4 @@
-module DNCL.Evaluator exposing (Exception(..), run)
+module DNCL.Evaluator exposing (Exception(..), Output, run)
 
 import DNCL.AST exposing (..)
 import Dict exposing (Dict)

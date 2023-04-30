@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Browser
+import DNCL.Evaluator exposing (Output, run)
+import DNCL.Parser exposing (parse)
 import Debug
 import Element
     exposing
@@ -30,23 +32,45 @@ type alias SourceCode =
 
 
 type alias Model =
-    { sourceCode : SourceCode }
+    { sourceCode : SourceCode
+    , output : Output
+    }
 
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { sourceCode = helloWorld }
+    ( { sourceCode = euclid
+      , output = []
+      }
     , Cmd.none
     )
 
 
 helloWorld : SourceCode
 helloWorld =
-    "「こんにちは、世界」と表示する"
+    "「こんにちは、世界」を表示する"
+
+
+euclid : SourceCode
+euclid =
+    """x ← 1071
+y ← 1029
+
+copy_x ← x
+copy_y ← y
+
+y ≠ 0 の間，
+    tmp ← y
+    y ← x ％ y
+    x ← tmp
+を繰り返す
+
+"gcd(" と copy_x と ", " と copy_y と ") = " と x を表示する"""
 
 
 type Msg
     = ReadSourceCode SourceCode
+    | RunProgram
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -54,6 +78,19 @@ update msg model =
     case msg of
         ReadSourceCode code ->
             ( { model | sourceCode = code }, Cmd.none )
+
+        RunProgram ->
+            case parse model.sourceCode of
+                Nothing ->
+                    ( { model | output = [ "構文エラーです" ] }, Cmd.none )
+
+                Just prog ->
+                    case run prog of
+                        Err _ ->
+                            ( { model | output = [ "実行時エラーです" ] }, Cmd.none )
+
+                        Ok out ->
+                            ( { model | output = out }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -75,7 +112,7 @@ view model =
     layoutWith { options = [ noFocus ] } [] <|
         column [ width fill, height fill ]
             [ header
-            , contents model.sourceCode
+            , contents model
             , toolbar
             ]
 
@@ -91,13 +128,13 @@ header =
         Element.text "Header"
 
 
-contents : SourceCode -> Element Msg
-contents code =
+contents : Model -> Element Msg
+contents model =
     row
         [ width fill
         , height fill
         ]
-        [ editor code, output code ]
+        [ editor model.sourceCode, output model.output ]
 
 
 editor : SourceCode -> Element Msg
@@ -121,28 +158,37 @@ editor code =
         }
 
 
-output : SourceCode -> Element msg
-output code =
+output : Output -> Element msg
+output out =
     el
-        [ Background.color (rgb255 100 255 255)
-        , width <| maximum 550 fill
+        [ width <| maximum 550 fill
         , height fill
+        , Font.family
+            [ Font.typeface "Consolas"
+            , Font.typeface "Courier New"
+            , Font.monospace
+            ]
         ]
     <|
         Element.text <|
-            String.fromInt <|
-                String.length code
+            String.join "\n" <|
+                List.reverse out
 
 
-toolbar : Element msg
+toolbar : Element Msg
 toolbar =
     el
-        [ Background.color (rgb255 100 100 255)
+        [ Background.color <| rgb255 100 100 255
         , width fill
         , height <| px 75
         ]
     <|
-        Element.text "Toolbar"
+        Input.button
+            [ Background.color <| rgb255 100 255 100
+            ]
+            { onPress = Just RunProgram
+            , label = Element.text "Run"
+            }
 
 
 main : Program () Model Msg
