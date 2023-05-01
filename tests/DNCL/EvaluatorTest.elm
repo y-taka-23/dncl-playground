@@ -13,10 +13,28 @@ nonzero =
     filter (\n -> n /= 0) int
 
 
+run : DNCLProgram -> Result Exception Output
+run prog =
+    load prog |> eval
+
+
+eval : Evaluator -> Result Exception Output
+eval ev =
+    case step ev of
+        Err e ->
+            Err e
+
+        Ok (Completed end) ->
+            Ok end.output
+
+        Ok (Running next) ->
+            eval next
+
+
 suite : Test
 suite =
     describe "The Evaluator module"
-        [ describe "run"
+        [ describe "step"
             [ test "outputs nothing for the empty program" <|
                 \_ ->
                     run []

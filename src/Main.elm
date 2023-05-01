@@ -1,7 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import DNCL.Evaluator exposing (Output, run)
+import DNCL.AST exposing (DNCLProgram)
+import DNCL.Evaluator exposing (Evaluator, Exception(..), Output, StepResult(..), load, step)
 import DNCL.Parser exposing (parse)
 import Debug
 import Element
@@ -100,6 +101,24 @@ update msg model =
 
                         Ok out ->
                             ( { model | output = out }, Cmd.none )
+
+
+run : DNCLProgram -> Result Exception Output
+run prog =
+    load prog |> eval
+
+
+eval : Evaluator -> Result Exception Output
+eval ev =
+    case step ev of
+        Err e ->
+            Err e
+
+        Ok (Completed end) ->
+            Ok end.output
+
+        Ok (Running next) ->
+            eval next
 
 
 subscriptions : Model -> Sub Msg
