@@ -34,6 +34,7 @@ type StepResult
 
 type Exception
     = UndefinedVariable Variable
+    | ConstReassignment Variable
     | ZeroDivision
     | UnsupportedOperation
 
@@ -52,17 +53,18 @@ step ev =
         [] ->
             Ok <| Completed ev
 
-        (Assign (Variable x) aexp) :: stmts ->
+        (Assign v aexp) :: stmts ->
             case evalArith ev.variables aexp of
                 Err e ->
                     Err e
 
                 Ok n ->
-                    let
-                        vs =
-                            Dict.insert x n ev.variables
-                    in
-                    Ok <| Continued { ev | continuation = stmts, variables = vs }
+                    case assignVariable v n ev.variables of
+                        Err e ->
+                            Err e
+
+                        Ok vs ->
+                            Ok <| Continued { ev | continuation = stmts, variables = vs }
 
         (Print ps) :: stmts ->
             case format ev.variables ps of
@@ -76,35 +78,37 @@ step ev =
                     in
                     Ok <| Continued { ev | continuation = stmts, output = out }
 
-        (Increment (Variable x) aexp) :: stmts ->
-            case ( Dict.get x ev.variables, evalArith ev.variables aexp ) of
-                ( Nothing, _ ) ->
-                    Err (UndefinedVariable (Variable x))
-
-                ( Just _, Err e ) ->
+        (Increment v aexp) :: stmts ->
+            case ( refVariable v ev.variables, evalArith ev.variables aexp ) of
+                ( Err e, _ ) ->
                     Err e
 
-                ( Just n, Ok m ) ->
-                    let
-                        vs =
-                            Dict.insert x (n + m) ev.variables
-                    in
-                    Ok <| Continued { ev | continuation = stmts, variables = vs }
-
-        (Decrement (Variable x) aexp) :: stmts ->
-            case ( Dict.get x ev.variables, evalArith ev.variables aexp ) of
-                ( Nothing, _ ) ->
-                    Err (UndefinedVariable (Variable x))
-
-                ( Just _, Err e ) ->
+                ( _, Err e ) ->
                     Err e
 
-                ( Just n, Ok m ) ->
-                    let
-                        vs =
-                            Dict.insert x (n - m) ev.variables
-                    in
-                    Ok <| Continued { ev | continuation = stmts, variables = vs }
+                ( Ok n, Ok m ) ->
+                    case assignVariable v (n + m) ev.variables of
+                        Err e ->
+                            Err e
+
+                        Ok vs ->
+                            Ok <| Continued { ev | continuation = stmts, variables = vs }
+
+        (Decrement v aexp) :: stmts ->
+            case ( refVariable v ev.variables, evalArith ev.variables aexp ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( _, Err e ) ->
+                    Err e
+
+                ( Ok n, Ok m ) ->
+                    case assignVariable v (n - m) ev.variables of
+                        Err e ->
+                            Err e
+
+                        Ok vs ->
+                            Ok <| Continued { ev | continuation = stmts, variables = vs }
 
         -- TODO: List concatination looks show
         (If bexp thenStmts) :: stmts ->
@@ -144,41 +148,83 @@ step ev =
         (PostCheckLoop loopStmts bexp) :: stmts ->
             Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
-        (IncrementLoop (Variable x) from to diff loopStmts) :: stmts ->
+        (IncrementLoop v from to diff loopStmts) :: stmts ->
             case evalArith ev.variables from of
                 Err e ->
                     Err e
 
                 Ok n ->
                     let
-                        vs =
-                            Dict.insert x n ev.variables
-
                         bexp =
-                            Le (Var (Variable x)) to
+                            Le (Var v) to
 
                         loop =
-                            PreCheckLoop bexp (loopStmts ++ [ Increment (Variable x) diff ])
+                            PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
                     in
-                    Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+                    case assignVariable v n ev.variables of
+                        Err e ->
+                            Err e
 
-        (DecrementLoop (Variable x) from to diff loopStmts) :: stmts ->
+                        Ok vs ->
+                            Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+
+        (DecrementLoop v from to diff loopStmts) :: stmts ->
             case evalArith ev.variables from of
                 Err e ->
                     Err e
 
                 Ok n ->
                     let
-                        vs =
-                            Dict.insert x n ev.variables
-
                         bexp =
-                            Ge (Var (Variable x)) to
+                            Ge (Var v) to
 
                         loop =
-                            PreCheckLoop bexp (loopStmts ++ [ Decrement (Variable x) diff ])
+                            PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
                     in
-                    Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+                    case assignVariable v n ev.variables of
+                        Err e ->
+                            Err e
+
+                        Ok vs ->
+                            Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+
+
+refVariable : Variable -> Variables -> Result Exception Int
+refVariable v vs =
+    case v of
+        Scalar x ->
+            case Dict.get x vs of
+                Nothing ->
+                    Err <| UndefinedVariable <| Scalar x
+
+                Just n ->
+                    Ok n
+
+        Const x ->
+            case Dict.get x vs of
+                Nothing ->
+                    Err <| UndefinedVariable <| Const x
+
+                Just n ->
+                    Ok n
+
+
+assignVariable : Variable -> Int -> Variables -> Result Exception Variables
+assignVariable v n vs =
+    case v of
+        Scalar x ->
+            Ok <| Dict.insert x n vs
+
+        Const x ->
+            case refVariable v vs of
+                Err (UndefinedVariable _) ->
+                    Ok <| Dict.insert x n vs
+
+                Err e ->
+                    Err e
+
+                Ok _ ->
+                    Err <| ConstReassignment (Const x)
 
 
 evalArith : Variables -> ArithExp -> Result Exception Int
@@ -191,13 +237,8 @@ evalArith vs aexp =
         Lit (StringVal _) ->
             Err UnsupportedOperation
 
-        Var (Variable x) ->
-            case Dict.get x vs of
-                Nothing ->
-                    Err (UndefinedVariable (Variable x))
-
-                Just n ->
-                    Ok n
+        Var v ->
+            refVariable v vs
 
         Plus e1 e2 ->
             Result.map2 (+) (evalArith vs e1) (evalArith vs e2)
@@ -279,13 +320,13 @@ format vs ps =
                 PrintVal (StringVal s) ->
                     Ok s
 
-                PrintVar (Variable x) ->
-                    case Dict.get x vs of
-                        Just n ->
-                            Ok (String.fromInt n)
+                PrintVar v ->
+                    case refVariable v vs of
+                        Err e ->
+                            Err e
 
-                        Nothing ->
-                            Err (UndefinedVariable (Variable x))
+                        Ok n ->
+                            Ok (String.fromInt n)
 
         concat r1 r2 =
             case ( r1, r2 ) of

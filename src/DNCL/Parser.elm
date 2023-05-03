@@ -46,17 +46,30 @@ parse code =
 
 variable_ : Parser Variable
 variable_ =
-    succeed Variable
-        |= name
+    oneOf
+        [ scalar
+        , const
+        ]
 
 
-name : Parser String
-name =
-    variable
-        { start = Char.isLower
-        , inner = \c -> Char.isAlphaNum c || (c == '_')
-        , reserved = Set.empty
-        }
+scalar : Parser Variable
+scalar =
+    succeed Scalar
+        |= variable
+            { start = Char.isLower
+            , inner = \c -> Char.isAlphaNum c || (c == '_')
+            , reserved = Set.empty
+            }
+
+
+const : Parser Variable
+const =
+    succeed Const
+        |= variable
+            { start = Char.isUpper
+            , inner = \c -> Char.isUpper c || Char.isDigit c || (c == '_')
+            , reserved = Set.empty
+            }
 
 
 value : Parser Value

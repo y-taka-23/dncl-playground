@@ -43,256 +43,270 @@ suite =
                 [ test "assigns a numeric value to a variable" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 42))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal 42))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "42" ])
+                , test "assigns a numeric value to a constant if it is undefined" <|
+                    \_ ->
+                        run
+                            [ Assign (Const "X") (Lit (NumberVal 42))
+                            , Print (singleton (PrintVar (Const "X")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "42" ])
+                , test "cannot assign a numeric value to a constant if it is already defined" <|
+                    \_ ->
+                        run
+                            [ Assign (Const "X") (Lit (NumberVal 42))
+                            , Assign (Const "X") (Lit (NumberVal 42))
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , test "cannot assign a string value to a variable" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (StringVal "Hello")) ]
+                            [ Assign (Scalar "x") (Lit (StringVal "Hello")) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , test "assigns values to multiple variables individually" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
-                            , Assign (Variable "y") (Lit (NumberVal 1))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , Assign (Scalar "y") (Lit (NumberVal 1))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "0" ])
-                , test "overrides a variable when it assigns twice" <|
+                , test "overrides a Scalar when it assigns twice" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
-                            , Assign (Variable "x") (Lit (NumberVal 1))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , Assign (Scalar "x") (Lit (NumberVal 1))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "1" ])
                 , fuzz (pair int int) "calculates the addition of two numbers" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Plus (Lit (NumberVal n)) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
-                , fuzz (pair int int) "calculates the addision of a variable and a number" <|
+                , fuzz (pair int int) "calculates the addision of a Scalar and a number" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal n))
-                            , Assign (Variable "x") (Plus (Var (Variable "y")) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal n))
+                            , Assign (Scalar "x") (Plus (Var (Scalar "y")) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz (pair int int) "calculates the addision of a number and a variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal m))
-                            , Assign (Variable "x") (Plus (Lit (NumberVal n)) (Var (Variable "y")))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal m))
+                            , Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Var (Scalar "y")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz (pair string int) "throws an exception if the left of addition is non numeric" <|
                     \( s, n ) ->
                         run
-                            [ Assign (Variable "x") (Plus (Lit (StringVal s)) (Lit (NumberVal n))) ]
+                            [ Assign (Scalar "x") (Plus (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of addition is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Plus (Lit (NumberVal n)) (Lit (StringVal s))) ]
+                            [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of addition is undefined" <|
                     \( y, n ) ->
                         run
-                            [ Assign (Variable "x") (Plus (Var (Variable y)) (Lit (NumberVal n))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Plus (Var (Scalar y)) (Lit (NumberVal n))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of addition is undefined" <|
                     \( n, y ) ->
                         run
-                            [ Assign (Variable "x") (Plus (Lit (NumberVal n)) (Var (Variable y))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Var (Scalar y))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int int) "calculates the subtraction of two numbers" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Minus (Lit (NumberVal n)) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
-                , fuzz (pair int int) "calculates the subtraction of a variable and a number" <|
+                , fuzz (pair int int) "calculates the subtraction of a Scalar and a number" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal n))
-                            , Assign (Variable "x") (Minus (Var (Variable "y")) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal n))
+                            , Assign (Scalar "x") (Minus (Var (Scalar "y")) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz (pair int int) "calculates the subtraction of a number and a variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal m))
-                            , Assign (Variable "x") (Minus (Lit (NumberVal n)) (Var (Variable "y")))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal m))
+                            , Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Var (Scalar "y")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz (pair string int) "throws an exception if the left of subtraction is non numeric" <|
                     \( s, n ) ->
                         run
-                            [ Assign (Variable "x") (Minus (Lit (StringVal s)) (Lit (NumberVal n))) ]
+                            [ Assign (Scalar "x") (Minus (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of subtraction is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Minus (Lit (NumberVal n)) (Lit (StringVal s))) ]
+                            [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of subtraction is undefined" <|
                     \( y, n ) ->
                         run
-                            [ Assign (Variable "x") (Minus (Var (Variable y)) (Lit (NumberVal n))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Minus (Var (Scalar y)) (Lit (NumberVal n))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of subtraction is undefined" <|
                     \( n, y ) ->
                         run
-                            [ Assign (Variable "x") (Minus (Lit (NumberVal n)) (Var (Variable y))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Var (Scalar y))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int int) "calculates the multiplication of two numbers" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Times (Lit (NumberVal n)) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
-                , fuzz (pair int int) "calculates the multiplication of a variable and a number" <|
+                , fuzz (pair int int) "calculates the multiplication of a Scalar and a number" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal n))
-                            , Assign (Variable "x") (Times (Var (Variable "y")) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal n))
+                            , Assign (Scalar "x") (Times (Var (Scalar "y")) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
                 , fuzz (pair int int) "calculates the multiplication of a number and a variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal m))
-                            , Assign (Variable "x") (Times (Lit (NumberVal n)) (Var (Variable "y")))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal m))
+                            , Assign (Scalar "x") (Times (Lit (NumberVal n)) (Var (Scalar "y")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
                 , fuzz (pair string int) "throws an exception if the left of multiplication is non numeric" <|
                     \( s, n ) ->
                         run
-                            [ Assign (Variable "x") (Times (Lit (StringVal s)) (Lit (NumberVal n))) ]
+                            [ Assign (Scalar "x") (Times (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of multiplication is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Times (Lit (NumberVal n)) (Lit (StringVal s))) ]
+                            [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of multiplication is undefined" <|
                     \( y, n ) ->
                         run
-                            [ Assign (Variable "x") (Times (Var (Variable y)) (Lit (NumberVal n))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Times (Var (Scalar y)) (Lit (NumberVal n))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of multiplication is undefined" <|
                     \( n, y ) ->
                         run
-                            [ Assign (Variable "x") (Times (Lit (NumberVal n)) (Var (Variable y))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Var (Scalar y))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int nonzero) "calculates the quotient of two numbers" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
-                , fuzz (pair int nonzero) "calculates the quotient of a variable and a number" <|
+                , fuzz (pair int nonzero) "calculates the quotient of a Scalar and a number" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal n))
-                            , Assign (Variable "x") (Quot (Var (Variable "y")) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal n))
+                            , Assign (Scalar "x") (Quot (Var (Scalar "y")) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
                 , fuzz (pair int nonzero) "calculates the quotient of a number and a variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal m))
-                            , Assign (Variable "x") (Quot (Lit (NumberVal n)) (Var (Variable "y")))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal m))
+                            , Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Var (Scalar "y")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
                 , fuzz int "throws an exception if the right of quotient is zero" <|
                     \n ->
                         run
-                            [ Assign (Variable "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
+                            [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
                 , fuzz (pair string int) "throws an exception if the left of quotient is non numeric" <|
                     \( s, n ) ->
                         run
-                            [ Assign (Variable "x") (Quot (Lit (StringVal s)) (Lit (NumberVal n))) ]
+                            [ Assign (Scalar "x") (Quot (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of quotient is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Quot (Lit (NumberVal n)) (Lit (StringVal s))) ]
+                            [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string nonzero) "throws an exception if the left of quotient is undefined" <|
                     \( y, n ) ->
                         run
-                            [ Assign (Variable "x") (Quot (Var (Variable y)) (Lit (NumberVal n))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Quot (Var (Scalar y)) (Lit (NumberVal n))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of quotient is undefined" <|
                     \( n, y ) ->
                         run
-                            [ Assign (Variable "x") (Quot (Lit (NumberVal n)) (Var (Variable y))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Var (Scalar y))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int nonzero) "calculates the remainder of two numbers" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
-                , fuzz (pair int nonzero) "calculates the remainder of a variable and a number" <|
+                , fuzz (pair int nonzero) "calculates the remainder of a Scalar and a number" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal n))
-                            , Assign (Variable "x") (Mod (Var (Variable "y")) (Lit (NumberVal m)))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal n))
+                            , Assign (Scalar "x") (Mod (Var (Scalar "y")) (Lit (NumberVal m)))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
                 , fuzz (pair int nonzero) "calculates the remainder of a number and a variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "y") (Lit (NumberVal m))
-                            , Assign (Variable "x") (Mod (Lit (NumberVal n)) (Var (Variable "y")))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "y") (Lit (NumberVal m))
+                            , Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Var (Scalar "y")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
                 , fuzz int "throws an exception if the right of remainder is zero" <|
                     \n ->
                         run
-                            [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
+                            [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
                 , fuzz (pair string int) "throws an exception if the left of remainder is non numeric" <|
                     \( s, n ) ->
                         run
-                            [ Assign (Variable "x") (Mod (Lit (StringVal s)) (Lit (NumberVal n))) ]
+                            [ Assign (Scalar "x") (Mod (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of remainder is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Lit (StringVal s))) ]
+                            [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of remainder is undefined" <|
                     \( y, n ) ->
                         run
-                            [ Assign (Variable "x") (Mod (Var (Variable y)) (Lit (NumberVal n))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Mod (Var (Scalar y)) (Lit (NumberVal n))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of remainder is undefined" <|
                     \( n, y ) ->
                         run
-                            [ Assign (Variable "x") (Mod (Lit (NumberVal n)) (Var (Variable y))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable y)))
+                            [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Var (Scalar y))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 ]
             , describe "print"
                 [ test "outputs a number value" <|
@@ -306,16 +320,16 @@ suite =
                 , test "outputs a variable" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 42))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal 42))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "42" ])
                 , test "outputs multiple items by concatination" <|
                     \_ ->
                         run
-                            [ Assign (Variable "kosu") (Lit (NumberVal 3))
+                            [ Assign (Scalar "kosu") (Lit (NumberVal 3))
                             , Print
-                                (Nonempty (PrintVar (Variable "kosu"))
+                                (Nonempty (PrintVar (Scalar "kosu"))
                                     [ PrintVal (StringVal " 個見つかった") ]
                                 )
                             ]
@@ -331,37 +345,44 @@ suite =
                 , test "throws an exception by an undefined variable" <|
                     \_ ->
                         run
-                            [ Print (singleton (PrintVar (Variable "x"))) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable "x")))
+                            [ Print (singleton (PrintVar (Scalar "x"))) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , test "throws an exception when one of items is an undefined variable" <|
                     \_ ->
                         run
                             [ Print
-                                (Nonempty (PrintVar (Variable "kosu"))
+                                (Nonempty (PrintVar (Scalar "kosu"))
                                     [ PrintVal (StringVal " 個見つかった") ]
                                 )
                             ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable "kosu")))
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "kosu")))
                 ]
             , describe "increment"
                 [ fuzz (pair int int) "increments a value of the variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal n))
-                            , Increment (Variable "x") (Lit (NumberVal m))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal n))
+                            , Increment (Scalar "x") (Lit (NumberVal m))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
-                , fuzz int "throws an exception if the variable is undefined" <|
+                , fuzz int "throws an exception if the variable is constant" <|
                     \m ->
                         run
-                            [ Increment (Variable "x") (Lit (NumberVal m)) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable "x")))
+                            [ Assign (Const "X") (Lit (NumberVal 0))
+                            , Increment (Const "X") (Lit (NumberVal m))
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
+                , fuzz int "throws an exception if the Scalar is undefined" <|
+                    \m ->
+                        run
+                            [ Increment (Scalar "x") (Lit (NumberVal m)) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , fuzz (pair int string) "throws an exception if the argument is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal n))
-                            , Increment (Variable "x") (Lit (StringVal s))
+                            [ Assign (Scalar "x") (Lit (NumberVal n))
+                            , Increment (Scalar "x") (Lit (StringVal s))
                             ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 ]
@@ -369,21 +390,28 @@ suite =
                 [ fuzz (pair int int) "decrements a value of the variable" <|
                     \( n, m ) ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal n))
-                            , Decrement (Variable "x") (Lit (NumberVal m))
-                            , Print (singleton (PrintVar (Variable "x")))
+                            [ Assign (Scalar "x") (Lit (NumberVal n))
+                            , Decrement (Scalar "x") (Lit (NumberVal m))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
-                , fuzz int "throws an exception if the variable is undefined" <|
+                , fuzz int "throws an exception if the variable is constant" <|
                     \m ->
                         run
-                            [ Decrement (Variable "x") (Lit (NumberVal m)) ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Variable "x")))
+                            [ Assign (Const "X") (Lit (NumberVal 0))
+                            , Decrement (Const "X") (Lit (NumberVal m))
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
+                , fuzz int "throws an exception if the Scalar is undefined" <|
+                    \m ->
+                        run
+                            [ Decrement (Scalar "x") (Lit (NumberVal m)) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , fuzz (pair int string) "throws an exception if the argument is non numeric" <|
                     \( n, s ) ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal n))
-                            , Decrement (Variable "x") (Lit (StringVal s))
+                            [ Assign (Scalar "x") (Lit (NumberVal n))
+                            , Decrement (Scalar "x") (Lit (StringVal s))
                             ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 ]
@@ -418,9 +446,9 @@ suite =
                     , test "throws an exception if the left of == is undefined" <|
                         \_ ->
                             run
-                                [ If (Eq (Var (Variable "x")) (Lit (StringVal "True"))) []
+                                [ If (Eq (Var (Scalar "x")) (Lit (StringVal "True"))) []
                                 ]
-                                |> Expect.equal (Result.Err (UndefinedVariable (Variable "x")))
+                                |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                     ]
                 , describe "neq"
                     [ test "doesn't evaluate the then clause if e1 == e2" <|
@@ -663,30 +691,30 @@ suite =
                 [ test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
-                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 0)))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 0)))
                                 [ Print (singleton (PrintVal (StringVal "Loop")))
-                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                , Increment (Scalar "x") (Lit (NumberVal 1))
                                 ]
                             ]
                             |> Expect.equal (Result.Ok [])
                 , test "evaluates the loop contents only once" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
-                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 1)))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 1)))
                                 [ Print (singleton (PrintVal (StringVal "Loop")))
-                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                , Increment (Scalar "x") (Lit (NumberVal 1))
                                 ]
                             ]
                             |> Expect.equal (Result.Ok [ "Loop" ])
                 , test "evaluates the loop contents multiple times" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
-                            , PreCheckLoop (Lt (Var (Variable "x")) (Lit (NumberVal 3)))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
                                 [ Print (singleton (PrintVal (StringVal "Loop")))
-                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                , Increment (Scalar "x") (Lit (NumberVal 1))
                                 ]
                             ]
                             |> Expect.equal (Result.Ok [ "Loop", "Loop", "Loop" ])
@@ -695,32 +723,32 @@ suite =
                 [ test "evaluates the loop contents even if the condition initially doesn't hold" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ Print (singleton (PrintVal (StringVal "Loop"))) ]
-                                (Lt (Var (Variable "x")) (Lit (NumberVal 0)))
+                                (Lt (Var (Scalar "x")) (Lit (NumberVal 0)))
                             ]
                             |> Expect.equal (Result.Ok [ "Loop" ])
                 , test "evaluates the loop contents only twice" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ Print (singleton (PrintVal (StringVal "Loop")))
-                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                , Increment (Scalar "x") (Lit (NumberVal 1))
                                 ]
-                                (Lt (Var (Variable "x")) (Lit (NumberVal 2)))
+                                (Lt (Var (Scalar "x")) (Lit (NumberVal 2)))
                             ]
                             |> Expect.equal (Result.Ok [ "Loop", "Loop" ])
                 , test "evaluates the loop contents multiple times" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 0))
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ Print (singleton (PrintVal (StringVal "Loop")))
-                                , Increment (Variable "x") (Lit (NumberVal 1))
+                                , Increment (Scalar "x") (Lit (NumberVal 1))
                                 ]
-                                (Lt (Var (Variable "x")) (Lit (NumberVal 4)))
+                                (Lt (Var (Scalar "x")) (Lit (NumberVal 4)))
                             ]
                             |> Expect.equal (Result.Ok [ "Loop", "Loop", "Loop", "Loop" ])
                 ]
@@ -728,89 +756,151 @@ suite =
                 [ test "evaluates the loop contents during the condition holds" <|
                     \_ ->
                         run
-                            [ IncrementLoop (Variable "x")
+                            [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [ "4", "3", "2", "1", "0" ])
                 , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
                         run
-                            [ IncrementLoop (Variable "x")
+                            [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 1))
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [])
-                , test "destructs an already defined variable as a counter" <|
+                , test "destructs an already defined Scalar as a counter" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 42))
-                            , IncrementLoop (Variable "x")
+                            [ Assign (Scalar "x") (Lit (NumberVal 42))
+                            , IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [ "0" ])
-                , test "leaves the counter variable after the loop" <|
+                , test "leaves the counter Scalar after the loop" <|
                     \_ ->
                         run
-                            [ IncrementLoop (Variable "x")
+                            [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 1))
                                 []
-                            , Print (singleton (PrintVar (Variable "x")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "5" ])
+                , test "evaluates the loop if the counter is a constant but undefined" <|
+                    \_ ->
+                        run
+                            [ IncrementLoop (Const "X")
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Const "X"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [])
+                , test "throws an exception if the counter is a pre-defined constant" <|
+                    \_ ->
+                        run
+                            [ Assign (Const "X") (Lit (NumberVal 0))
+                            , IncrementLoop (Const "X")
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                []
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
+                , test "throws an exception if the counter is constant and updated" <|
+                    \_ ->
+                        run
+                            [ IncrementLoop (Const "X")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                []
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 ]
             , describe "decrement loop"
                 [ test "evaluates the loop contents during the condition holds" <|
                     \_ ->
                         run
-                            [ DecrementLoop (Variable "x")
+                            [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [ "0", "1", "2", "3", "4" ])
                 , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
                         run
-                            [ DecrementLoop (Variable "x")
+                            [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [])
-                , test "destructs an already defined variable as a counter" <|
+                , test "destructs an already defined Scalar as a counter" <|
                     \_ ->
                         run
-                            [ Assign (Variable "x") (Lit (NumberVal 42))
-                            , DecrementLoop (Variable "x")
+                            [ Assign (Scalar "x") (Lit (NumberVal 42))
+                            , DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
-                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                                [ Print (singleton (PrintVar (Scalar "x"))) ]
                             ]
                             |> Expect.equal (Result.Ok [ "0" ])
-                , test "leaves the counter variable after the loop" <|
+                , test "leaves the counter Scalar after the loop" <|
                     \_ ->
                         run
-                            [ DecrementLoop (Variable "x")
+                            [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
                                 []
-                            , Print (singleton (PrintVar (Variable "x")))
+                            , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "-1" ])
+                , test "evaluates the loop if the counter is a constant but undefined" <|
+                    \_ ->
+                        run
+                            [ DecrementLoop (Const "X")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Const "X"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [])
+                , test "throws an exception if the counter is a pre-defined constant" <|
+                    \_ ->
+                        run
+                            [ Assign (Const "X") (Lit (NumberVal 0))
+                            , DecrementLoop (Const "X")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 1))
+                                []
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
+                , test "throws an exception if the counter is constant and updated" <|
+                    \_ ->
+                        run
+                            [ DecrementLoop (Const "X")
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                []
+                            ]
+                            |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 ]
             ]
         ]

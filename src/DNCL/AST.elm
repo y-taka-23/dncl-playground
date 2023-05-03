@@ -8,7 +8,8 @@ type alias Name =
 
 
 type Variable
-    = Variable Name
+    = Scalar Name
+    | Const Name
 
 
 type Value
