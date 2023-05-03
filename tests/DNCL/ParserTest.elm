@@ -1317,6 +1317,292 @@ suite =
                                     )
                                 )
                 ]
+            , describe "incrementLoop"
+                [ test "parses increment loop with the empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses increment loop with a single blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses increment loop with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses increment loop with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+                                    gokei ← gokei ＋ x
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses increment loop with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses increment loop with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses increment loop with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+                                    gokei ← gokei ＋ x
+
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses increment loop with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ増やしながら，
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (IncrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                ]
+            , describe "decrementLoop"
+                [ test "parses decrement loop with the empty body" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses decrement loop with a single blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses decrement loop with multiple blank lines" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        []
+                                    )
+                                )
+                , test "parses decrement loop with a single statement" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+                                    gokei ← gokei ＋ x
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses decrement loop with multiple statements" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses decrement loop with a preceding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses decrement loop with a blank line in the middle" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+                                    gokei ← gokei ＋ x
+
+                                    x を表示する
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                , test "parses decrement loop with a succeeding blank line" <|
+                    \_ ->
+                        Parser.run statement
+                            """ x を 0 から 4 まで 1 ずつ減らしながら，
+                                    gokei ← gokei ＋ x
+                                    x を表示する
+
+                                を繰り返す"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    (DecrementLoop (Variable "x")
+                                        (Lit (NumberVal 0))
+                                        (Lit (NumberVal 4))
+                                        (Lit (NumberVal 1))
+                                        [ Assign (Variable "gokei")
+                                            (Plus (Var (Variable "gokei")) (Var (Variable "x")))
+                                        , Print (singleton (PrintVar (Variable "x")))
+                                        ]
+                                    )
+                                )
+                ]
             ]
         , describe "dnclProgram"
             [ test "parses the empty procedure" <|

@@ -56,6 +56,8 @@ type Statement
     | IfElse BoolExp Procedure Procedure
     | PreCheckLoop BoolExp Procedure
     | PostCheckLoop Procedure BoolExp
+    | IncrementLoop Variable ArithExp ArithExp ArithExp Procedure
+    | DecrementLoop Variable ArithExp ArithExp ArithExp Procedure
 
 
 type alias DNCLProgram =

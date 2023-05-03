@@ -295,6 +295,8 @@ blockStatement =
         , ifElse
         , preCheckLoop
         , postCheckLoop
+        , incrementLoop
+        , decrementLoop
         ]
 
 
@@ -460,6 +462,56 @@ postCheckLoop =
                 |. blanks
                 |. symbol "になるまで実行する"
             )
+
+
+incrementLoop : Parser Statement
+incrementLoop =
+    succeed (\( v, ( f, t, d ) ) p -> IncrementLoop v f t d p)
+        |= line
+            (succeed (\v f t d -> ( v, ( f, t, d ) ))
+                |= backtrackable variable_
+                |. backtrackable blanks
+                |. backtrackable (symbol "を")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. backtrackable (symbol "から")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. backtrackable (symbol "まで")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. symbol "ずつ増やしながら，"
+            )
+        |= procedure
+        |. line (symbol "を繰り返す")
+
+
+decrementLoop : Parser Statement
+decrementLoop =
+    succeed (\( v, ( f, t, d ) ) p -> DecrementLoop v f t d p)
+        |= line
+            (succeed (\v f t d -> ( v, ( f, t, d ) ))
+                |= backtrackable variable_
+                |. backtrackable blanks
+                |. backtrackable (symbol "を")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. backtrackable (symbol "から")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. backtrackable (symbol "まで")
+                |. backtrackable blanks
+                |= backtrackable arithExp
+                |. backtrackable blanks
+                |. symbol "ずつ減らしながら，"
+            )
+        |= procedure
+        |. line (symbol "を繰り返す")
 
 
 dnclProgram : Parser DNCLProgram

@@ -144,6 +144,42 @@ step ev =
         (PostCheckLoop loopStmts bexp) :: stmts ->
             Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
+        (IncrementLoop (Variable x) from to diff loopStmts) :: stmts ->
+            case evalArith ev.variables from of
+                Err e ->
+                    Err e
+
+                Ok n ->
+                    let
+                        vs =
+                            Dict.insert x n ev.variables
+
+                        bexp =
+                            Le (Var (Variable x)) to
+
+                        loop =
+                            PreCheckLoop bexp (loopStmts ++ [ Increment (Variable x) diff ])
+                    in
+                    Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+
+        (DecrementLoop (Variable x) from to diff loopStmts) :: stmts ->
+            case evalArith ev.variables from of
+                Err e ->
+                    Err e
+
+                Ok n ->
+                    let
+                        vs =
+                            Dict.insert x n ev.variables
+
+                        bexp =
+                            Ge (Var (Variable x)) to
+
+                        loop =
+                            PreCheckLoop bexp (loopStmts ++ [ Decrement (Variable x) diff ])
+                    in
+                    Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+
 
 evalArith : Variables -> ArithExp -> Result Exception Int
 evalArith vs aexp =

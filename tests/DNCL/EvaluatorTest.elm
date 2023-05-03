@@ -724,5 +724,93 @@ suite =
                             ]
                             |> Expect.equal (Result.Ok [ "Loop", "Loop", "Loop", "Loop" ])
                 ]
+            , describe "increment loop"
+                [ test "evaluates the loop contents during the condition holds" <|
+                    \_ ->
+                        run
+                            [ IncrementLoop (Variable "x")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 4))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "4", "3", "2", "1", "0" ])
+                , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
+                    \_ ->
+                        run
+                            [ IncrementLoop (Variable "x")
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [])
+                , test "destructs an already defined variable as a counter" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 42))
+                            , IncrementLoop (Variable "x")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "0" ])
+                , test "leaves the counter variable after the loop" <|
+                    \_ ->
+                        run
+                            [ IncrementLoop (Variable "x")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 4))
+                                (Lit (NumberVal 1))
+                                []
+                            , Print (singleton (PrintVar (Variable "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "5" ])
+                ]
+            , describe "decrement loop"
+                [ test "evaluates the loop contents during the condition holds" <|
+                    \_ ->
+                        run
+                            [ DecrementLoop (Variable "x")
+                                (Lit (NumberVal 4))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "0", "1", "2", "3", "4" ])
+                , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
+                    \_ ->
+                        run
+                            [ DecrementLoop (Variable "x")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [])
+                , test "destructs an already defined variable as a counter" <|
+                    \_ ->
+                        run
+                            [ Assign (Variable "x") (Lit (NumberVal 42))
+                            , DecrementLoop (Variable "x")
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                [ Print (singleton (PrintVar (Variable "x"))) ]
+                            ]
+                            |> Expect.equal (Result.Ok [ "0" ])
+                , test "leaves the counter variable after the loop" <|
+                    \_ ->
+                        run
+                            [ DecrementLoop (Variable "x")
+                                (Lit (NumberVal 4))
+                                (Lit (NumberVal 0))
+                                (Lit (NumberVal 1))
+                                []
+                            , Print (singleton (PrintVar (Variable "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "-1" ])
+                ]
             ]
         ]
