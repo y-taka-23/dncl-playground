@@ -35,15 +35,23 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
+import Task
+import Time exposing (Posix)
 
 
 type alias SourceCode =
     String
 
 
+type ExecState
+    = Stopped
+    | Running { since : Posix, evaluator : Evaluator }
+
+
 type alias Model =
     { sourceCode : SourceCode
     , output : Output
+    , execState : ExecState
     }
 
 
@@ -51,6 +59,7 @@ init : flags -> ( Model, Cmd Msg )
 init _ =
     ( { sourceCode = euclid
       , output = []
+      , execState = Stopped
       }
     , Cmd.none
     )
@@ -80,7 +89,19 @@ y ≠ 0 の間，
 
 type Msg
     = ReadSourceCode SourceCode
-    | RunProgram
+    | TriggerProgram
+    | RunProgram Posix
+    | StepForward Posix
+
+
+timeoutSeconds : Int
+timeoutSeconds =
+    5
+
+
+stepIntervalMillis : Float
+stepIntervalMillis =
+    10
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,41 +110,54 @@ update msg model =
         ReadSourceCode code ->
             ( { model | sourceCode = code }, Cmd.none )
 
-        RunProgram ->
+        TriggerProgram ->
+            ( model, Task.perform RunProgram Time.now )
+
+        RunProgram now ->
             case parse model.sourceCode of
                 Nothing ->
-                    ( { model | output = [ "構文エラーです" ] }, Cmd.none )
+                    ( { model | output = [ "構文エラーです" ], execState = Stopped }, Cmd.none )
 
                 Just prog ->
-                    case run prog of
-                        Err _ ->
-                            ( { model | output = [ "実行時エラーです" ] }, Cmd.none )
+                    ( { model | output = [], execState = Running { since = now, evaluator = load prog } }
+                    , Cmd.none
+                    )
 
-                        Ok out ->
-                            ( { model | output = out }, Cmd.none )
+        StepForward current ->
+            case model.execState of
+                Stopped ->
+                    ( model, Cmd.none )
 
+                Running exec ->
+                    if Time.posixToMillis current - Time.posixToMillis exec.since > timeoutSeconds * 1000 then
+                        ( { model | output = "制限時間を超過しました" :: model.output, execState = Stopped }
+                        , Cmd.none
+                        )
 
-run : DNCLProgram -> Result Exception Output
-run prog =
-    load prog |> eval
+                    else
+                        case step exec.evaluator of
+                            Err _ ->
+                                ( { model | output = "実行時エラーです" :: model.output, execState = Stopped }
+                                , Cmd.none
+                                )
 
+                            Ok (Completed end) ->
+                                ( { model | output = end.output, execState = Stopped }, Cmd.none )
 
-eval : Evaluator -> Result Exception Output
-eval ev =
-    case step ev of
-        Err e ->
-            Err e
-
-        Ok (Completed end) ->
-            Ok end.output
-
-        Ok (Running next) ->
-            eval next
+                            Ok (Continued next) ->
+                                ( { model | output = next.output, execState = Running { exec | evaluator = next } }
+                                , Cmd.none
+                                )
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model.execState of
+        Stopped ->
+            Sub.none
+
+        Running _ ->
+            Time.every stepIntervalMillis StepForward
 
 
 view : Model -> Html Msg
@@ -290,7 +324,7 @@ toolbar =
             , Font.size 18
             , Font.center
             ]
-            { onPress = Just RunProgram
+            { onPress = Just TriggerProgram
             , label = Element.text "実行"
             }
 

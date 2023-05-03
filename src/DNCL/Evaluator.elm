@@ -29,7 +29,7 @@ type alias Output =
 
 type StepResult
     = Completed Evaluator
-    | Running Evaluator
+    | Continued Evaluator
 
 
 type Exception
@@ -62,7 +62,7 @@ step ev =
                         vs =
                             Dict.insert x n ev.variables
                     in
-                    Ok <| Running { ev | continuation = stmts, variables = vs }
+                    Ok <| Continued { ev | continuation = stmts, variables = vs }
 
         (Print ps) :: stmts ->
             case format ev.variables ps of
@@ -74,7 +74,7 @@ step ev =
                         out =
                             s :: ev.output
                     in
-                    Ok <| Running { ev | continuation = stmts, output = out }
+                    Ok <| Continued { ev | continuation = stmts, output = out }
 
         (Increment (Variable x) aexp) :: stmts ->
             case ( Dict.get x ev.variables, evalArith ev.variables aexp ) of
@@ -89,7 +89,7 @@ step ev =
                         vs =
                             Dict.insert x (n + m) ev.variables
                     in
-                    Ok <| Running { ev | continuation = stmts, variables = vs }
+                    Ok <| Continued { ev | continuation = stmts, variables = vs }
 
         (Decrement (Variable x) aexp) :: stmts ->
             case ( Dict.get x ev.variables, evalArith ev.variables aexp ) of
@@ -104,7 +104,7 @@ step ev =
                         vs =
                             Dict.insert x (n - m) ev.variables
                     in
-                    Ok <| Running { ev | continuation = stmts, variables = vs }
+                    Ok <| Continued { ev | continuation = stmts, variables = vs }
 
         -- TODO: List concatination looks show
         (If bexp thenStmts) :: stmts ->
@@ -113,10 +113,10 @@ step ev =
                     Err e
 
                 Ok True ->
-                    Ok <| Running { ev | continuation = thenStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = thenStmts ++ stmts }
 
                 Ok False ->
-                    Ok <| Running { ev | continuation = stmts }
+                    Ok <| Continued { ev | continuation = stmts }
 
         (IfElse bexp thenStmts elseStmts) :: stmts ->
             case evalBool ev.variables bexp of
@@ -124,10 +124,10 @@ step ev =
                     Err e
 
                 Ok True ->
-                    Ok <| Running { ev | continuation = thenStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = thenStmts ++ stmts }
 
                 Ok False ->
-                    Ok <| Running { ev | continuation = elseStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = elseStmts ++ stmts }
 
         -- TODO: Handle the infinite loop
         (PreCheckLoop bexp loopStmts) :: stmts ->
@@ -136,13 +136,13 @@ step ev =
                     Err e
 
                 Ok True ->
-                    Ok <| Running { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
+                    Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
                 Ok False ->
-                    Ok <| Running { ev | continuation = stmts }
+                    Ok <| Continued { ev | continuation = stmts }
 
         (PostCheckLoop loopStmts bexp) :: stmts ->
-            Ok <| Running { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
+            Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
 
 evalArith : Variables -> ArithExp -> Result Exception Int

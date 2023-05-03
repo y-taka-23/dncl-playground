@@ -27,7 +27,7 @@ eval ev =
         Ok (Completed end) ->
             Ok end.output
 
-        Ok (Running next) ->
+        Ok (Continued next) ->
             eval next
 
 
