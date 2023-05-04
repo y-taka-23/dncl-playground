@@ -35,6 +35,7 @@ type StepResult
 type Exception
     = UndefinedVariable Variable
     | ConstReassignment Variable
+    | InvalidArrayAssignment Variable
     | ZeroDivision
     | UnsupportedOperation
 
@@ -59,7 +60,7 @@ step ev =
                     Err e
 
                 Ok n ->
-                    case assignVariable v n ev.variables of
+                    case assignVar v n ev.variables of
                         Err e ->
                             Err e
 
@@ -143,7 +144,7 @@ step ev =
                         loop =
                             PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
                     in
-                    case assignVariable v n ev.variables of
+                    case assignVar v n ev.variables of
                         Err e ->
                             Err e
 
@@ -163,7 +164,7 @@ step ev =
                         loop =
                             PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
                     in
-                    case assignVariable v n ev.variables of
+                    case assignVar v n ev.variables of
                         Err e ->
                             Err e
 
@@ -171,8 +172,8 @@ step ev =
                             Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
 
 
-refVariable : Variable -> Variables -> Result Exception Value
-refVariable v vs =
+lookupVar : Variable -> Variables -> Result Exception Value
+lookupVar v vs =
     case v of
         Scalar x ->
             Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
@@ -180,15 +181,48 @@ refVariable v vs =
         Const x ->
             Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
 
+        Array x idxs ->
+            case Dict.get x vs of
+                Nothing ->
+                    Err <| UndefinedVariable v
 
-assignVariable : Variable -> Value -> Variables -> Result Exception Variables
-assignVariable v val vs =
-    case v of
-        Scalar x ->
+                Just arr ->
+                    Result.fromMaybe (UndefinedVariable v) <| lookupArray arr idxs
+
+
+lookupArray : Value -> List Index -> Maybe Value
+lookupArray val idxs =
+    case ( val, idxs ) of
+        ( _, [] ) ->
+            Just val
+
+        -- TODO: Refine the exception by e.g. IndexOutOfBound
+        ( ArrayVal elems, i :: is ) ->
+            case Dict.get i elems of
+                Nothing ->
+                    Nothing
+
+                Just elem ->
+                    lookupArray elem is
+
+        ( _, _ :: _ ) ->
+            Nothing
+
+
+assignVar : Variable -> Value -> Variables -> Result Exception Variables
+assignVar v val vs =
+    case ( v, val ) of
+        ( Scalar x, ArrayVal _ ) ->
+            Err <| InvalidArrayAssignment v
+
+        ( Scalar x, _ ) ->
             Ok <| Dict.insert x val vs
 
-        Const x ->
-            case refVariable v vs of
+        ( Const x, ArrayVal _ ) ->
+            Err <| InvalidArrayAssignment v
+
+        ( Const x, _ ) ->
+            case lookupVar v vs of
                 Err (UndefinedVariable _) ->
                     Ok <| Dict.insert x val vs
 
@@ -198,6 +232,48 @@ assignVariable v val vs =
                 Ok _ ->
                     Err <| ConstReassignment (Const x)
 
+        ( Array x [], ArrayVal _ ) ->
+            Ok <| Dict.insert x val vs
+
+        ( Array _ [], _ ) ->
+            Err <| InvalidArrayAssignment v
+
+        ( Array x idxs, _ ) ->
+            case lookupVar (Array x []) vs of
+                Err e ->
+                    Err <| UndefinedVariable v
+
+                Ok root ->
+                    case assignArray root idxs val of
+                        Nothing ->
+                            Err <| UndefinedVariable v
+
+                        Just newRoot ->
+                            Ok <| Dict.insert x newRoot vs
+
+
+assignArray : Value -> List Index -> Value -> Maybe Value
+assignArray root idxs newElem =
+    case ( root, idxs ) of
+        ( _, [] ) ->
+            Just newElem
+
+        ( ArrayVal elems, i :: is ) ->
+            case Dict.get i elems of
+                Nothing ->
+                    Nothing
+
+                Just elem ->
+                    case assignArray elem is newElem of
+                        Nothing ->
+                            Nothing
+
+                        Just newRoot ->
+                            Just <| ArrayVal <| Dict.insert i newRoot elems
+
+        ( _, _ :: _ ) ->
+            Nothing
+
 
 evalArith : Variables -> ArithExp -> Result Exception Value
 evalArith vs aexp =
@@ -206,7 +282,7 @@ evalArith vs aexp =
             Ok val
 
         Var v ->
-            refVariable v vs
+            lookupVar v vs
 
         Plus e1 e2 ->
             Result.map NumberVal <| opNums (+) (evalArith vs e1) (evalArith vs e2)
@@ -331,35 +407,63 @@ opNums op r1 r2 =
 format : Variables -> Nonempty Printable -> Result Exception String
 format vs ps =
     let
-        toString p =
-            case p of
-                PrintVal (NumberVal n) ->
-                    Ok (String.fromInt n)
-
-                PrintVal (StringVal s) ->
-                    Ok s
-
-                PrintVar v ->
-                    case refVariable v vs of
-                        Err e ->
-                            Err e
-
-                        Ok (NumberVal n) ->
-                            Ok (String.fromInt n)
-
-                        Ok (StringVal s) ->
-                            Ok s
-
         concat r1 r2 =
-            case ( r1, r2 ) of
-                ( Err e, _ ) ->
-                    Err e
-
-                ( Ok _, Err e ) ->
-                    Err e
-
-                -- List.Nonempty.foldl1 accumulates items in the reverse order
-                ( Ok x, Ok y ) ->
-                    Ok (y ++ x)
+            -- List.Nonempty.foldl1 accumulates items in the reverse order
+            Result.map2 (\x y -> y ++ x) r1 r2
     in
-    Nonempty.foldl1 concat <| Nonempty.map toString ps
+    Nonempty.foldl1 concat <| Nonempty.map (formatItem vs) ps
+
+
+formatItem : Variables -> Printable -> Result Exception String
+formatItem vs p =
+    case p of
+        PrintVal val ->
+            Ok <| formatValue val
+
+        PrintVar v ->
+            case lookupVar v vs of
+                Err e ->
+                    Err e
+
+                Ok val ->
+                    Ok <| formatValue val
+
+
+formatValue : Value -> String
+formatValue val =
+    case val of
+        NumberVal n ->
+            String.fromInt n
+
+        StringVal s ->
+            s
+
+        ArrayVal _ ->
+            formatArray <| Just val
+
+
+formatArray : Maybe Value -> String
+formatArray mval =
+    case mval of
+        Nothing ->
+            -- As far as parsed from source code, an array has 0..size-1 indices
+            "unreachable"
+
+        Just (NumberVal n) ->
+            String.fromInt n
+
+        Just (StringVal s) ->
+            "\"" ++ s ++ "\""
+
+        Just (ArrayVal elems) ->
+            let
+                maxIndex =
+                    Maybe.withDefault -1 <| List.maximum <| Dict.keys elems
+
+                filled =
+                    List.map (\i -> Dict.get i elems) <| List.range 0 maxIndex
+
+                formatted =
+                    List.map formatArray filled
+            in
+            "{" ++ String.join ", " formatted ++ "}"

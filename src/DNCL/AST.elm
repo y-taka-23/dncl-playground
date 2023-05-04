@@ -1,5 +1,6 @@
 module DNCL.AST exposing (..)
 
+import Dict exposing (Dict)
 import List.Nonempty exposing (Nonempty)
 
 
@@ -7,14 +8,20 @@ type alias Name =
     String
 
 
+type alias Index =
+    Int
+
+
 type Variable
     = Scalar Name
     | Const Name
+    | Array Name (List Index)
 
 
 type Value
     = NumberVal Int
     | StringVal String
+    | ArrayVal (Dict Index Value)
 
 
 type Printable

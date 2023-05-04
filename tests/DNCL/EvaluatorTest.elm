@@ -2,6 +2,7 @@ module DNCL.EvaluatorTest exposing (suite)
 
 import DNCL.AST exposing (..)
 import DNCL.Evaluator exposing (..)
+import Dict
 import Expect
 import Fuzz exposing (Fuzzer, filter, int, pair, string)
 import List.Nonempty exposing (Nonempty(..), singleton)
@@ -68,6 +69,159 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "Hello" ])
+                , test "assigns an array value to an array variable" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                , test "assigns an element to an array variable" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ 1 ]) (Lit (NumberVal 999))
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{100, 999, 300}" ])
+                , test "assigns an array to an array variable" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ 1 ])
+                                (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 888 ), ( 1, NumberVal 999 ) ]))
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{100, {888, 999}, 300}" ])
+                , test "assigns an element to a 2-dim array variable" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ 0, 1 ]) (Lit (NumberVal 999))
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{{100, 999}, {300, 400}}" ])
+                , test "ossigns an element of a 1-dim array to a scalar" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ 1 ]))
+                            , Print (singleton (PrintVar (Scalar "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "200" ])
+                , test "ossigns an element of a 2-dim array to a scalar" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ 0, 1 ]))
+                            , Print (singleton (PrintVar (Scalar "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "200" ])
+                , test "throws an exception when an array is assigned to a scalar variable" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Scalar "x") (Lit arr) ]
+                            |> Expect.equal (Result.Err (InvalidArrayAssignment (Scalar "x")))
+                , test "throws an exception when an array is assigned to a constant" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Const "X") (Lit arr) ]
+                            |> Expect.equal (Result.Err (InvalidArrayAssignment (Const "X")))
+                , test "throws an exception when a number is assigned to an array variable" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" []) (Lit (NumberVal 0)) ]
+                            |> Expect.equal (Result.Err (InvalidArrayAssignment (Array "MyArr" [])))
+                , test "throws an exception when a string is assigned to an array variable" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" []) (Lit (StringVal "Hello")) ]
+                            |> Expect.equal (Result.Err (InvalidArrayAssignment (Array "MyArr" [])))
+                , test "throws an exception when the index is negative" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ -1 ]) (Lit (NumberVal 999))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ -1 ])))
+                , test "throws an exception when the index exceeds the bound" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ 3 ]) (Lit (NumberVal 999))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ 3 ])))
+                , test "throws an exception when the index is missing" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ 0, 1 ]) (Lit (NumberVal 999))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ 0, 1 ])))
                 , test "assigns values to multiple variables individually" <|
                     \_ ->
                         run
@@ -352,6 +506,62 @@ suite =
                     \_ ->
                         run [ Print (singleton (PrintVal (StringVal "こんにちは、世界"))) ]
                             |> Expect.equal (Result.Ok [ "こんにちは、世界" ])
+                , test "outputs the empty array value" <|
+                    \_ ->
+                        run [ Print (singleton (PrintVal (ArrayVal Dict.empty))) ]
+                            |> Expect.equal (Result.Ok [ "{}" ])
+                , test "outputs a 1-dim numeric array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run [ Print (singleton (PrintVal arr)) ]
+                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                , test "outputs a 1-dim string array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, StringVal "A" ), ( 1, StringVal "B" ), ( 2, StringVal "C" ) ]
+                        in
+                        run [ Print (singleton (PrintVal arr)) ]
+                            |> Expect.equal (Result.Ok [ "{\"A\", \"B\", \"C\"}" ])
+                , test "outputs a 2-dim array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run [ Print (singleton (PrintVal arr)) ]
+                            |> Expect.equal (Result.Ok [ "{{100, 200}, {300, 400}}" ])
+                , test "outputs a heterogeneous array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, NumberVal 100 )
+                                        , ( 1, StringVal "B" )
+                                        , ( 2, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        ]
+                        in
+                        run [ Print (singleton (PrintVal arr)) ]
+                            |> Expect.equal (Result.Ok [ "{100, \"B\", {100, 200}}" ])
+                , test "outputs an array with undefined elements" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 1, NumberVal 100 ), ( 3, NumberVal 200 ) ]
+                        in
+                        run [ Print (singleton (PrintVal arr)) ]
+                            |> Expect.equal (Result.Ok [ "{unreachable, 100, unreachable, 200}" ])
                 , test "outputs a variable" <|
                     \_ ->
                         run
@@ -359,6 +569,33 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "42" ])
+                , test "outputs an element of a 1-dim array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Print (singleton (PrintVar (Array "MyArr" [ 1 ])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "200" ])
+                , test "outputs an element of a 2-dim array value" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Print (singleton (PrintVar (Array "MyArr" [ 0, 1 ])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "200" ])
                 , test "outputs multiple items by concatination" <|
                     \_ ->
                         run
