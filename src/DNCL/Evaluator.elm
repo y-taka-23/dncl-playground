@@ -334,14 +334,7 @@ evalArith vs aexp =
                     Err e
 
                 Ok vals ->
-                    let
-                        idxs =
-                            List.range 0 (List.length vals - 1)
-
-                        elems =
-                            Dict.fromList <| List.map2 Tuple.pair idxs vals
-                    in
-                    Ok <| ArrayVal elems
+                    Ok <| ArrayVal <| Dict.fromList <| List.indexedMap Tuple.pair vals
 
 
 evalBool : Variables -> BoolExp -> Result Exception Bool
