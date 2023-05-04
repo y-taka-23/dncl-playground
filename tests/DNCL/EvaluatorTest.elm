@@ -153,6 +153,26 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "200" ])
+                , test "ossigns a 1-dim array of expressions" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Arr [ Lit (NumberVal 100), Lit (NumberVal 200), Lit (NumberVal 300) ])
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                , test "ossigns a 2-dim array of expressions" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Arr
+                                    [ Arr [ Lit (NumberVal 100), Lit (NumberVal 200) ]
+                                    , Arr [ Lit (NumberVal 300), Lit (NumberVal 400) ]
+                                    ]
+                                )
+                            , Print (singleton (PrintVar (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{{100, 200}, {300, 400}}" ])
                 , test "throws an exception when an array is assigned to a scalar variable" <|
                     \_ ->
                         let

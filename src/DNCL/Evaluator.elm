@@ -10,6 +10,7 @@ module DNCL.Evaluator exposing
 import DNCL.AST exposing (..)
 import Dict exposing (Dict)
 import List.Nonempty as Nonempty exposing (Nonempty)
+import Result.Extra as Result
 
 
 type alias Evaluator =
@@ -326,6 +327,21 @@ evalArith vs aexp =
 
                 ( Ok _, Ok _ ) ->
                     Err UnsupportedOperation
+
+        Arr es ->
+            case Result.combineMap (evalArith vs) es of
+                Err e ->
+                    Err e
+
+                Ok vals ->
+                    let
+                        idxs =
+                            List.range 0 (List.length vals - 1)
+
+                        elems =
+                            Dict.fromList <| List.map2 Tuple.pair idxs vals
+                    in
+                    Ok <| ArrayVal elems
 
 
 evalBool : Variables -> BoolExp -> Result Exception Bool

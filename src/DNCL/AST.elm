@@ -37,6 +37,7 @@ type ArithExp
     | Times ArithExp ArithExp
     | Quot ArithExp ArithExp
     | Mod ArithExp ArithExp
+    | Arr (List ArithExp)
 
 
 type BoolExp
