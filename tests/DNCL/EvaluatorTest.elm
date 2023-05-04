@@ -153,6 +153,30 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "200" ])
+                , test "throws an exception when the index of the array variable is negative" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ -1 ]))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ -1 ])))
+                , test "throws an exception when the index of the array exceeds the bound" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ 3 ]))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ 3 ])))
                 , test "ossigns a 1-dim array of expressions" <|
                     \_ ->
                         run
