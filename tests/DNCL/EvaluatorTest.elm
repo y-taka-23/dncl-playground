@@ -61,11 +61,13 @@ suite =
                             , Assign (Const "X") (Lit (NumberVal 42))
                             ]
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
-                , test "cannot assign a string value to a variable" <|
+                , test "assigns a string value to a variable" <|
                     \_ ->
                         run
-                            [ Assign (Scalar "x") (Lit (StringVal "Hello")) ]
-                            |> Expect.equal (Result.Err UnsupportedOperation)
+                            [ Assign (Scalar "x") (Lit (StringVal "Hello"))
+                            , Print (singleton (PrintVar (Scalar "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "Hello" ])
                 , test "assigns values to multiple variables individually" <|
                     \_ ->
                         run
@@ -82,6 +84,14 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "1" ])
+                , test "overrides a number by s string" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "x") (Lit (NumberVal 0))
+                            , Assign (Scalar "x") (Lit (StringVal "Hello"))
+                            , Print (singleton (PrintVar (Scalar "x")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "Hello" ])
                 , fuzz (pair int int) "calculates the addition of two numbers" <|
                     \( n, m ) ->
                         run
@@ -105,6 +115,11 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
+                , fuzz (pair string string) "throws an exception if the both of addition are strings" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Scalar "x") (Plus (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of addition is non numeric" <|
                     \( s, n ) ->
                         run
@@ -148,6 +163,11 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
+                , fuzz (pair string string) "throws an exception if the both of subtraction are strings" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Scalar "x") (Minus (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of subtraction is non numeric" <|
                     \( s, n ) ->
                         run
@@ -191,6 +211,11 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
+                , fuzz (pair string string) "throws an exception if the both of multiplication are strings" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Scalar "x") (Times (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of multiplication is non numeric" <|
                     \( s, n ) ->
                         run
@@ -234,6 +259,11 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
+                , fuzz (pair string string) "throws an exception if the both of quotient are strings" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Scalar "x") (Quot (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of quotient is zero" <|
                     \n ->
                         run
@@ -282,6 +312,11 @@ suite =
                             , Print (singleton (PrintVar (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
+                , fuzz (pair string string) "throws an exception if the both of remainder are strings" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Scalar "x") (Mod (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of remainder is zero" <|
                     \n ->
                         run
@@ -417,27 +452,41 @@ suite =
                 ]
             , describe "if"
                 [ describe "eq"
-                    [ test "evaluates the then clause if e1 == e2" <|
+                    [ test "evaluates the then clause if n1 == n2" <|
                         \_ ->
                             run
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
-                    , test "doesn't evaluate the then clause if e1 /= e2" <|
+                    , test "doesn't evaluate the then clause if n1 /= n2" <|
                         \_ ->
                             run
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
-                    , test "throws an exception if the left of == is non numeric" <|
+                    , test "evaluates the then clause if s1 == s2" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (StringVal "True")) (Lit (StringVal "True")))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluates the then clause if s1 /= s2" <|
+                        \_ ->
+                            run
+                                [ If (Eq (Lit (StringVal "True")) (Lit (StringVal "False")))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "throws an exception if the condition is string == number" <|
                         \_ ->
                             run
                                 [ If (Eq (Lit (StringVal "True")) (Lit (NumberVal 0))) []
                                 ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
-                    , test "throws an exception if the right of == is non numeric" <|
+                    , test "throws an exception if the condition is number == string" <|
                         \_ ->
                             run
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (StringVal "True"))) []
@@ -451,17 +500,31 @@ suite =
                                 |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                     ]
                 , describe "neq"
-                    [ test "doesn't evaluate the then clause if e1 == e2" <|
+                    [ test "doesn't evaluate the then clause if n1 == n2" <|
                         \_ ->
                             run
                                 [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
-                    , test "evaluates the then clause if e1 /= e2" <|
+                    , test "evaluates the then clause if n1 /= n2" <|
                         \_ ->
                             run
                                 [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [ "True" ])
+                    , test "doesn't evaluate the then clause if s1 == s2" <|
+                        \_ ->
+                            run
+                                [ If (Neq (Lit (StringVal "True")) (Lit (StringVal "True")))
+                                    [ Print (singleton (PrintVal (StringVal "True"))) ]
+                                ]
+                                |> Expect.equal (Result.Ok [])
+                    , test "evaluates the then clause if s1 /= s2" <|
+                        \_ ->
+                            run
+                                [ If (Neq (Lit (StringVal "True")) (Lit (StringVal "False")))
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
@@ -488,6 +551,11 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
+                    , test "throws an exception if the both of innequation are strings" <|
+                        \_ ->
+                            run
+                                [ If (Gt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "ge"
                     [ test "evaluates the then clause if e1 == e2" <|
@@ -511,6 +579,11 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
+                    , test "throws an exception if the both of innequation are strings" <|
+                        \_ ->
+                            run
+                                [ If (Ge (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "le"
                     [ test "evaluates the then clause if e1 == e2" <|
@@ -534,6 +607,11 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
+                    , test "throws an exception if the both of innequation are strings" <|
+                        \_ ->
+                            run
+                                [ If (Le (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "lt"
                     [ test "doens't evaluate the then clause if e1 == e2" <|
@@ -557,6 +635,11 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
+                    , test "throws an exception if the both of innequation are strings" <|
+                        \_ ->
+                            run
+                                [ If (Lt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "and"
                     [ test "evaluates the then clause if True && True" <|

@@ -20,7 +20,7 @@ type alias Evaluator =
 
 
 type alias Variables =
-    Dict Name Int
+    Dict Name Value
 
 
 type alias Output =
@@ -79,36 +79,18 @@ step ev =
                     Ok <| Continued { ev | continuation = stmts, output = out }
 
         (Increment v aexp) :: stmts ->
-            case ( refVariable v ev.variables, evalArith ev.variables aexp ) of
-                ( Err e, _ ) ->
-                    Err e
-
-                ( _, Err e ) ->
-                    Err e
-
-                ( Ok n, Ok m ) ->
-                    case assignVariable v (n + m) ev.variables of
-                        Err e ->
-                            Err e
-
-                        Ok vs ->
-                            Ok <| Continued { ev | continuation = stmts, variables = vs }
+            let
+                stmt =
+                    Assign v (Plus (Var v) aexp)
+            in
+            Ok <| Continued { ev | continuation = stmt :: stmts }
 
         (Decrement v aexp) :: stmts ->
-            case ( refVariable v ev.variables, evalArith ev.variables aexp ) of
-                ( Err e, _ ) ->
-                    Err e
-
-                ( _, Err e ) ->
-                    Err e
-
-                ( Ok n, Ok m ) ->
-                    case assignVariable v (n - m) ev.variables of
-                        Err e ->
-                            Err e
-
-                        Ok vs ->
-                            Ok <| Continued { ev | continuation = stmts, variables = vs }
+            let
+                stmt =
+                    Assign v (Minus (Var v) aexp)
+            in
+            Ok <| Continued { ev | continuation = stmt :: stmts }
 
         -- TODO: List concatination looks show
         (If bexp thenStmts) :: stmts ->
@@ -189,36 +171,26 @@ step ev =
                             Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
 
 
-refVariable : Variable -> Variables -> Result Exception Int
+refVariable : Variable -> Variables -> Result Exception Value
 refVariable v vs =
     case v of
         Scalar x ->
-            case Dict.get x vs of
-                Nothing ->
-                    Err <| UndefinedVariable <| Scalar x
-
-                Just n ->
-                    Ok n
+            Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
 
         Const x ->
-            case Dict.get x vs of
-                Nothing ->
-                    Err <| UndefinedVariable <| Const x
-
-                Just n ->
-                    Ok n
+            Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
 
 
-assignVariable : Variable -> Int -> Variables -> Result Exception Variables
-assignVariable v n vs =
+assignVariable : Variable -> Value -> Variables -> Result Exception Variables
+assignVariable v val vs =
     case v of
         Scalar x ->
-            Ok <| Dict.insert x n vs
+            Ok <| Dict.insert x val vs
 
         Const x ->
             case refVariable v vs of
                 Err (UndefinedVariable _) ->
-                    Ok <| Dict.insert x n vs
+                    Ok <| Dict.insert x val vs
 
                 Err e ->
                     Err e
@@ -227,27 +199,23 @@ assignVariable v n vs =
                     Err <| ConstReassignment (Const x)
 
 
-evalArith : Variables -> ArithExp -> Result Exception Int
+evalArith : Variables -> ArithExp -> Result Exception Value
 evalArith vs aexp =
     case aexp of
-        Lit (NumberVal n) ->
-            Ok n
-
-        -- TODO: The new style DNCL has string concatination
-        Lit (StringVal _) ->
-            Err UnsupportedOperation
+        Lit val ->
+            Ok val
 
         Var v ->
             refVariable v vs
 
         Plus e1 e2 ->
-            Result.map2 (+) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (+) (evalArith vs e1) (evalArith vs e2)
 
         Minus e1 e2 ->
-            Result.map2 (-) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (-) (evalArith vs e1) (evalArith vs e2)
 
         Times e1 e2 ->
-            Result.map2 (*) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (*) (evalArith vs e1) (evalArith vs e2)
 
         Quot e1 e2 ->
             case ( evalArith vs e1, evalArith vs e2 ) of
@@ -257,11 +225,14 @@ evalArith vs aexp =
                 ( Ok _, Err e ) ->
                     Err e
 
-                ( Ok _, Ok 0 ) ->
+                ( Ok (NumberVal _), Ok (NumberVal 0) ) ->
                     Err ZeroDivision
 
-                ( Ok n, Ok m ) ->
-                    Ok (n // m)
+                ( Ok (NumberVal n), Ok (NumberVal m) ) ->
+                    Ok <| NumberVal <| n // m
+
+                ( Ok _, Ok _ ) ->
+                    Err UnsupportedOperation
 
         Mod e1 e2 ->
             case ( evalArith vs e1, evalArith vs e2 ) of
@@ -271,33 +242,64 @@ evalArith vs aexp =
                 ( Ok _, Err e ) ->
                     Err e
 
-                ( Ok _, Ok 0 ) ->
+                ( Ok (NumberVal _), Ok (NumberVal 0) ) ->
                     Err ZeroDivision
 
-                ( Ok n, Ok m ) ->
-                    Ok (modBy m n)
+                ( Ok (NumberVal n), Ok (NumberVal m) ) ->
+                    Ok <| NumberVal <| modBy m n
+
+                ( Ok _, Ok _ ) ->
+                    Err UnsupportedOperation
 
 
 evalBool : Variables -> BoolExp -> Result Exception Bool
 evalBool vs bexp =
     case bexp of
         Eq e1 e2 ->
-            Result.map2 (==) (evalArith vs e1) (evalArith vs e2)
+            case ( evalArith vs e1, evalArith vs e2 ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( Ok _, Err e ) ->
+                    Err e
+
+                ( Ok (NumberVal n), Ok (NumberVal m) ) ->
+                    Ok <| n == m
+
+                ( Ok (StringVal s1), Ok (StringVal s2) ) ->
+                    Ok <| s1 == s2
+
+                ( Ok _, Ok _ ) ->
+                    Err UnsupportedOperation
 
         Neq e1 e2 ->
-            Result.map2 (/=) (evalArith vs e1) (evalArith vs e2)
+            case ( evalArith vs e1, evalArith vs e2 ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( Ok _, Err e ) ->
+                    Err e
+
+                ( Ok (NumberVal n), Ok (NumberVal m) ) ->
+                    Ok <| n /= m
+
+                ( Ok (StringVal s1), Ok (StringVal s2) ) ->
+                    Ok <| s1 /= s2
+
+                ( Ok _, Ok _ ) ->
+                    Err UnsupportedOperation
 
         Gt e1 e2 ->
-            Result.map2 (>) (evalArith vs e1) (evalArith vs e2)
+            opNums (>) (evalArith vs e1) (evalArith vs e2)
 
         Ge e1 e2 ->
-            Result.map2 (>=) (evalArith vs e1) (evalArith vs e2)
+            opNums (>=) (evalArith vs e1) (evalArith vs e2)
 
         Le e1 e2 ->
-            Result.map2 (<=) (evalArith vs e1) (evalArith vs e2)
+            opNums (<=) (evalArith vs e1) (evalArith vs e2)
 
         Lt e1 e2 ->
-            Result.map2 (<) (evalArith vs e1) (evalArith vs e2)
+            opNums (<) (evalArith vs e1) (evalArith vs e2)
 
         And e1 e2 ->
             Result.map2 (&&) (evalBool vs e1) (evalBool vs e2)
@@ -307,6 +309,23 @@ evalBool vs bexp =
 
         Not e ->
             Result.map not (evalBool vs e)
+
+
+opNums : (Int -> Int -> a) -> Result Exception Value -> Result Exception Value -> Result Exception a
+opNums op r1 r2 =
+    case ( r1, r2 ) of
+        ( Err e, _ ) ->
+            Err e
+
+        ( Ok _, Err e ) ->
+            Err e
+
+        ( Ok (NumberVal n), Ok (NumberVal m) ) ->
+            Ok <| op n m
+
+        ( Ok _, Ok _ ) ->
+            -- TODO: The new style of DNCL supports string concatination
+            Err UnsupportedOperation
 
 
 format : Variables -> Nonempty Printable -> Result Exception String
@@ -325,8 +344,11 @@ format vs ps =
                         Err e ->
                             Err e
 
-                        Ok n ->
+                        Ok (NumberVal n) ->
                             Ok (String.fromInt n)
+
+                        Ok (StringVal s) ->
+                            Ok s
 
         concat r1 r2 =
             case ( r1, r2 ) of
