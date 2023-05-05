@@ -37,6 +37,7 @@ type Exception
     = UndefinedVariable Variable
     | ConstReassignment Variable
     | InvalidArrayAssignment Variable
+    | NonNumericArrayIndex Value
     | ZeroDivision
     | UnsupportedOperation
 
@@ -182,12 +183,15 @@ lookupVar v vs =
         Const x ->
             Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
 
-        Array x idxs ->
-            case Dict.get x vs of
-                Nothing ->
+        Array x aexps ->
+            case ( evalIndices vs aexps, Dict.get x vs ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( _, Nothing ) ->
                     Err <| UndefinedVariable v
 
-                Just arr ->
+                ( Ok idxs, Just arr ) ->
                     Result.fromMaybe (UndefinedVariable v) <| lookupArray arr idxs
 
 
@@ -239,12 +243,15 @@ assignVar v val vs =
         ( Array _ [], _ ) ->
             Err <| InvalidArrayAssignment v
 
-        ( Array x idxs, _ ) ->
-            case lookupVar (Array x []) vs of
-                Err e ->
+        ( Array x aexps, _ ) ->
+            case ( evalIndices vs aexps, lookupVar (Array x []) vs ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( _, Err e ) ->
                     Err <| UndefinedVariable v
 
-                Ok root ->
+                ( Ok idxs, Ok root ) ->
                     case assignArray root idxs val of
                         Nothing ->
                             Err <| UndefinedVariable v
@@ -274,6 +281,25 @@ assignArray root idxs newElem =
 
         ( _, _ :: _ ) ->
             Nothing
+
+
+evalIndices : Variables -> List ArithExp -> Result Exception (List Index)
+evalIndices vs aexps =
+    case Result.combineMap (evalArith vs) aexps of
+        Err e ->
+            Err e
+
+        Ok vals ->
+            let
+                toIndex val =
+                    case val of
+                        NumberVal n ->
+                            Ok n
+
+                        _ ->
+                            Err val
+            in
+            Result.mapError NonNumericArrayIndex <| Result.combineMap toIndex vals
 
 
 evalArith : Variables -> ArithExp -> Result Exception Value

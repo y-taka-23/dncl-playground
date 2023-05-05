@@ -15,7 +15,7 @@ type alias Index =
 type Variable
     = Scalar Name
     | Const Name
-    | Array Name (List Index)
+    | Array Name (List ArithExp)
 
 
 type Value
