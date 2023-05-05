@@ -196,7 +196,7 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal -1) ]))
                             ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal -1) ])))
+                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal -1) ])))
                 , test "throws an exception when the index of the array exceeds the bound" <|
                     \_ ->
                         let
@@ -208,7 +208,7 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 3) ]))
                             ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 3) ])))
+                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 3) ])))
                 , test "assigns a 1-dim array of expressions" <|
                     \_ ->
                         run
@@ -270,7 +270,7 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal -1) ]) (Lit (NumberVal 999))
                             ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal -1) ])))
+                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal -1) ])))
                 , test "throws an exception when the index exceeds the bound" <|
                     \_ ->
                         let
@@ -282,7 +282,7 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 3) ]) (Lit (NumberVal 999))
                             ]
-                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 3) ])))
+                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 3) ])))
                 , test "throws an exception when the index is missing" <|
                     \_ ->
                         let
@@ -299,7 +299,7 @@ suite =
                             ]
                             |> Expect.equal
                                 (Result.Err
-                                    (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
+                                    (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
                                 )
                 , test "assigns values to multiple variables individually" <|
                     \_ ->

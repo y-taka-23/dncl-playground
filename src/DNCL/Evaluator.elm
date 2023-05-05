@@ -38,6 +38,7 @@ type Exception
     | ConstReassignment Variable
     | InvalidArrayAssignment Variable
     | NonNumericArrayIndex Value
+    | IndexOutOfBound Variable
     | ZeroDivision
     | UnsupportedOperation
 
@@ -192,7 +193,7 @@ lookupVar v vs =
                     Err <| UndefinedVariable v
 
                 ( Ok idxs, Just arr ) ->
-                    Result.fromMaybe (UndefinedVariable v) <| lookupArray arr idxs
+                    Result.fromMaybe (IndexOutOfBound v) <| lookupArray arr idxs
 
 
 lookupArray : Value -> List Index -> Maybe Value
@@ -201,7 +202,6 @@ lookupArray val idxs =
         ( _, [] ) ->
             Just val
 
-        -- TODO: Refine the exception by e.g. IndexOutOfBound
         ( ArrayVal elems, i :: is ) ->
             case Dict.get i elems of
                 Nothing ->
@@ -249,12 +249,12 @@ assignVar v val vs =
                     Err e
 
                 ( _, Err e ) ->
-                    Err <| UndefinedVariable v
+                    Err e
 
                 ( Ok idxs, Ok root ) ->
                     case assignArray root idxs val of
                         Nothing ->
-                            Err <| UndefinedVariable v
+                            Err <| IndexOutOfBound v
 
                         Just newRoot ->
                             Ok <| Dict.insert x newRoot vs
