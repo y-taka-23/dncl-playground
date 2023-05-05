@@ -4,6 +4,10 @@ import Dict exposing (Dict)
 import List.Nonempty exposing (Nonempty)
 
 
+type alias SourceCode =
+    String
+
+
 type alias Name =
     String
 

@@ -34,7 +34,7 @@ import Parser
 import Set
 
 
-parse : String -> Maybe DNCLProgram
+parse : SourceCode -> Maybe DNCLProgram
 parse code =
     case run dnclProgram code of
         Ok prog ->

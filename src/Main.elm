@@ -1,8 +1,9 @@
 module Main exposing (..)
 
 import Browser
-import DNCL.AST exposing (DNCLProgram)
+import DNCL.AST exposing (DNCLProgram, SourceCode)
 import DNCL.Evaluator exposing (Evaluator, Exception(..), Output, StepResult(..), load, step)
+import DNCL.Example exposing (..)
 import DNCL.Parser exposing (parse)
 import Debug
 import Element
@@ -39,10 +40,6 @@ import Task
 import Time exposing (Posix)
 
 
-type alias SourceCode =
-    String
-
-
 type ExecState
     = Stopped
     | Running { since : Posix, evaluator : Evaluator }
@@ -57,53 +54,12 @@ type alias Model =
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { sourceCode = bubbleSort
+    ( { sourceCode = pastExam2023
       , output = []
       , execState = Stopped
       }
     , Cmd.none
     )
-
-
-helloWorld : SourceCode
-helloWorld =
-    "「こんにちは、世界」を表示する"
-
-
-euclid : SourceCode
-euclid =
-    """x ← 1071
-y ← 1029
-
-copy_x ← x
-copy_y ← y
-
-y ≠ 0 の間，
-    "x = " と x と ", y = " と y を表示する
-    tmp ← y
-    y ← x ％ y
-    x ← tmp
-を繰り返す
-
-"gcd(" と copy_x と ", " と copy_y と ") = " と x を表示する"""
-
-
-bubbleSort : SourceCode
-bubbleSort =
-    """Arr ← {7， 2， 1， 4， 0， 5， 6， 3}
-
-i を 6 から 0 まで 1 ずつ減らしながら，
-    j を 0 から i まで 1 ずつ増やしながら，
-        もし Arr[j] ＞ Arr[j ＋ 1] ならば
-            "Arr = " と Arr を表示する
-            tmp ← Arr[j]
-            Arr[j] ← Arr[j ＋ 1]
-            Arr[j ＋ 1] ← tmp
-        を実行する
-    を繰り返す
-を繰り返す
-
-"Arr = " と Arr を表示する"""
 
 
 type Msg
