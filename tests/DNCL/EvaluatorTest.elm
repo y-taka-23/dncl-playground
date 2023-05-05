@@ -353,6 +353,16 @@ suite =
                         run
                             [ Assign (Scalar "x") (Plus (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
+                , fuzz (pair string string) "throws an exception if the both of addition are arrays" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Plus
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 2, NumberVal 300 ), ( 3, NumberVal 400 ) ]))
+                                )
+                            ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of addition is non numeric" <|
                     \( s, n ) ->
                         run
@@ -400,6 +410,16 @@ suite =
                     \( s, t ) ->
                         run
                             [ Assign (Scalar "x") (Minus (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
+                , fuzz (pair string string) "throws an exception if the both of subtraction are arrays" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Minus
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 2, NumberVal 300 ), ( 3, NumberVal 400 ) ]))
+                                )
+                            ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of subtraction is non numeric" <|
                     \( s, n ) ->
@@ -449,6 +469,16 @@ suite =
                         run
                             [ Assign (Scalar "x") (Times (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
+                , fuzz (pair string string) "throws an exception if the both of multiplication are arrays" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Times
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 2, NumberVal 300 ), ( 3, NumberVal 400 ) ]))
+                                )
+                            ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of multiplication is non numeric" <|
                     \( s, n ) ->
                         run
@@ -496,6 +526,16 @@ suite =
                     \( s, t ) ->
                         run
                             [ Assign (Scalar "x") (Quot (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
+                , fuzz (pair string string) "throws an exception if the both of quotient are arrays" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Quot
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 2, NumberVal 300 ), ( 3, NumberVal 400 ) ]))
+                                )
+                            ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of quotient is zero" <|
                     \n ->
@@ -549,6 +589,16 @@ suite =
                     \( s, t ) ->
                         run
                             [ Assign (Scalar "x") (Mod (Lit (StringVal s)) (Lit (StringVal t))) ]
+                            |> Expect.equal (Result.Err UnsupportedOperation)
+                , fuzz (pair string string) "throws an exception if the both of remainder are arrays" <|
+                    \( s, t ) ->
+                        run
+                            [ Assign (Array "MyArr" [])
+                                (Mod
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                    (Lit (ArrayVal <| Dict.fromList [ ( 2, NumberVal 300 ), ( 3, NumberVal 400 ) ]))
+                                )
+                            ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of remainder is zero" <|
                     \n ->
@@ -796,6 +846,17 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
+                    , test "throws an exception if the condition is array == array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Eq
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the condition is string == number" <|
                         \_ ->
                             run
@@ -844,6 +905,17 @@ suite =
                                     [ Print (singleton (PrintVal (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
+                    , test "throws an exception if the condition is array /= array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Neq
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "gt"
                     [ test "doesn't evaluate the then clause if e1 == e2" <|
@@ -871,6 +943,17 @@ suite =
                         \_ ->
                             run
                                 [ If (Gt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the both of innequation are array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Gt
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "ge"
@@ -900,6 +983,17 @@ suite =
                             run
                                 [ If (Ge (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the both of innequation are array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Ge
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "le"
                     [ test "evaluates the then clause if e1 == e2" <|
@@ -928,6 +1022,17 @@ suite =
                             run
                                 [ If (Le (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the both of innequation are array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Le
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "lt"
                     [ test "doens't evaluate the then clause if e1 == e2" <|
@@ -955,6 +1060,17 @@ suite =
                         \_ ->
                             run
                                 [ If (Lt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
+                                |> Expect.equal (Result.Err UnsupportedOperation)
+                    , test "throws an exception if the both of innequation are array" <|
+                        \_ ->
+                            run
+                                [ If
+                                    (Lt
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
+                                        (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 200 ), ( 1, NumberVal 100 ) ]))
+                                    )
+                                    []
+                                ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     ]
                 , describe "and"
