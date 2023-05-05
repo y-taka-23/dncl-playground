@@ -119,7 +119,6 @@ step ev =
                 Ok False ->
                     Ok <| Continued { ev | continuation = elseStmts ++ stmts }
 
-        -- TODO: Handle the infinite loop
         (PreCheckLoop bexp loopStmts) :: stmts ->
             case evalBool ev.variables bexp of
                 Err e ->
