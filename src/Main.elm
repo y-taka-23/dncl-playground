@@ -79,6 +79,7 @@ copy_x ← x
 copy_y ← y
 
 y ≠ 0 の間，
+    "x = " と x と ", y = " と y を表示する
     tmp ← y
     y ← x ％ y
     x ← tmp
@@ -101,7 +102,7 @@ timeoutSeconds =
 
 stepIntervalMillis : Float
 stepIntervalMillis =
-    10
+    5
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -236,8 +237,8 @@ monospace : Attribute msg
 monospace =
     Font.family
         [ Font.typeface "Consolas"
-        , Font.typeface "Courier New"
         , Font.typeface "Courier"
+        , Font.typeface "Courier New"
         , Font.typeface "Monaco"
         , Font.monospace
         ]

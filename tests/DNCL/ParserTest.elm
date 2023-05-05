@@ -42,7 +42,7 @@ suite =
                     \_ ->
                         Parser.run variable_ "個数"
                             |> Expect.err
-                , test "cannot contain a symbol other than a hyphen" <|
+                , test "cannot contain a symbol other than a underscore" <|
                     \_ ->
                         Parser.run variable_ "kosu-gokei"
                             |> Expect.equal (Result.Ok (Scalar "kosu"))
@@ -84,7 +84,7 @@ suite =
                     \_ ->
                         Parser.run variable_ "_KOSU"
                             |> Expect.err
-                , test "cannot contain a symbol other than a hyphen" <|
+                , test "cannot contain a symbol other than a underscore" <|
                     \_ ->
                         Parser.run variable_ "KOSU-GOKEI"
                             |> Expect.equal (Result.Ok (Const "KOSU"))
