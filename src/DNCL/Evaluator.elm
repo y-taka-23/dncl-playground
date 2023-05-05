@@ -500,4 +500,4 @@ formatArray mval =
                 formatted =
                     List.map formatArray filled
             in
-            "{" ++ String.join ", " formatted ++ "}"
+            "{" ++ String.join "， " formatted ++ "}"

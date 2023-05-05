@@ -80,7 +80,7 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                            |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
                 , test "assigns an element to an array variable" <|
                     \_ ->
                         let
@@ -93,7 +93,7 @@ suite =
                             , Assign (Array "MyArr" [ Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{100, 999, 300}" ])
+                            |> Expect.equal (Result.Ok [ "{100， 999， 300}" ])
                 , test "assigns an array to an array variable" <|
                     \_ ->
                         let
@@ -107,7 +107,7 @@ suite =
                                 (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 888 ), ( 1, NumberVal 999 ) ]))
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{100, {888, 999}, 300}" ])
+                            |> Expect.equal (Result.Ok [ "{100， {888， 999}， 300}" ])
                 , test "assigns an element to a 2-dim array variable" <|
                     \_ ->
                         let
@@ -123,7 +123,7 @@ suite =
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{{100, 999}, {300, 400}}" ])
+                            |> Expect.equal (Result.Ok [ "{{100， 999}， {300， 400}}" ])
                 , test "assigns an element of a 1-dim array to a scalar" <|
                     \_ ->
                         let
@@ -216,7 +216,7 @@ suite =
                                 (Arr [ Lit (NumberVal 100), Lit (NumberVal 200), Lit (NumberVal 300) ])
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                            |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
                 , test "assigns a 2-dim array of expressions" <|
                     \_ ->
                         run
@@ -228,7 +228,7 @@ suite =
                                 )
                             , Print (singleton (PrintVar (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Ok [ "{{100, 200}, {300, 400}}" ])
+                            |> Expect.equal (Result.Ok [ "{{100， 200}， {300， 400}}" ])
                 , test "throws an exception when an array is assigned to a scalar variable" <|
                     \_ ->
                         let
@@ -647,7 +647,7 @@ suite =
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
                         run [ Print (singleton (PrintVal arr)) ]
-                            |> Expect.equal (Result.Ok [ "{100, 200, 300}" ])
+                            |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
                 , test "outputs a 1-dim string array value" <|
                     \_ ->
                         let
@@ -656,7 +656,7 @@ suite =
                                     Dict.fromList [ ( 0, StringVal "A" ), ( 1, StringVal "B" ), ( 2, StringVal "C" ) ]
                         in
                         run [ Print (singleton (PrintVal arr)) ]
-                            |> Expect.equal (Result.Ok [ "{\"A\", \"B\", \"C\"}" ])
+                            |> Expect.equal (Result.Ok [ "{\"A\"， \"B\"， \"C\"}" ])
                 , test "outputs a 2-dim array value" <|
                     \_ ->
                         let
@@ -668,7 +668,7 @@ suite =
                                         ]
                         in
                         run [ Print (singleton (PrintVal arr)) ]
-                            |> Expect.equal (Result.Ok [ "{{100, 200}, {300, 400}}" ])
+                            |> Expect.equal (Result.Ok [ "{{100， 200}， {300， 400}}" ])
                 , test "outputs a heterogeneous array value" <|
                     \_ ->
                         let
@@ -681,7 +681,7 @@ suite =
                                         ]
                         in
                         run [ Print (singleton (PrintVal arr)) ]
-                            |> Expect.equal (Result.Ok [ "{100, \"B\", {100, 200}}" ])
+                            |> Expect.equal (Result.Ok [ "{100， \"B\"， {100， 200}}" ])
                 , test "outputs an array with undefined elements" <|
                     \_ ->
                         let
@@ -690,7 +690,7 @@ suite =
                                     Dict.fromList [ ( 1, NumberVal 100 ), ( 3, NumberVal 200 ) ]
                         in
                         run [ Print (singleton (PrintVal arr)) ]
-                            |> Expect.equal (Result.Ok [ "{unreachable, 100, unreachable, 200}" ])
+                            |> Expect.equal (Result.Ok [ "{unreachable， 100， unreachable， 200}" ])
                 , test "outputs a variable" <|
                     \_ ->
                         run

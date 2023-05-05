@@ -48,7 +48,7 @@ variable_ : Parser Variable
 variable_ =
     oneOf
         [ scalar
-        , const
+        , constOrArray
         ]
 
 
@@ -62,14 +62,33 @@ scalar =
             }
 
 
-const : Parser Variable
-const =
-    succeed Const
+constOrArray : Parser Variable
+constOrArray =
+    succeed toConstOrArray
         |= variable
             { start = Char.isUpper
-            , inner = \c -> Char.isUpper c || Char.isDigit c || (c == '_')
+            , inner = \c -> Char.isAlphaNum c || (c == '_')
             , reserved = Set.empty
             }
+        |= oneOf
+            [ squareBrackets (lazy (\_ -> arithExpSeq))
+            , succeed []
+            ]
+
+
+toConstOrArray : Name -> List ArithExp -> Variable
+toConstOrArray x aexps =
+    if String.all Char.isUpper x && List.isEmpty aexps then
+        Const x
+
+    else
+        Array x aexps
+
+
+arithExpSeq : Parser (List ArithExp)
+arithExpSeq =
+    arithExp
+        |> andThen (\e -> loop [ e ] arithExpLoop)
 
 
 value : Parser Value
@@ -129,20 +148,48 @@ blanks =
     chompWhile (\c -> c == ' ')
 
 
-parens : Parser a -> Parser a
-parens p =
+brackets : String -> String -> Parser a -> Parser a
+brackets left right p =
     succeed identity
-        |. symbol "("
+        |. symbol left
         |. blanks
         |= p
         |. blanks
-        |. symbol ")"
+        |. symbol right
+
+
+roundBrackets : Parser a -> Parser a
+roundBrackets =
+    brackets "(" ")"
+
+
+squareBrackets : Parser a -> Parser a
+squareBrackets =
+    brackets "[" "]"
+
+
+curlyBrackets : Parser a -> Parser a
+curlyBrackets =
+    brackets "{" "}"
 
 
 arithExp : Parser ArithExp
 arithExp =
     arithTerm
         |> andThen (\e -> loop e arithTermLoop)
+
+
+arithExpLoop : List ArithExp -> Parser (Step (List ArithExp) (List ArithExp))
+arithExpLoop acc =
+    oneOf
+        [ succeed (\e -> Loop (e :: acc))
+            |. backtrackable blanks
+            |. symbol "，"
+            |. blanks
+            |= arithExp
+        , succeed ()
+            |> map (\_ -> Done <| List.reverse acc)
+        ]
 
 
 arithTermLoop : ArithExp -> Parser (Step ArithExp ArithExp)
@@ -197,7 +244,8 @@ arithFactor =
     oneOf
         [ arithLit
         , arithVar
-        , parens (lazy (\_ -> arithExp))
+        , arithArr
+        , roundBrackets (lazy (\_ -> arithExp))
         ]
 
 
@@ -211,6 +259,21 @@ arithVar : Parser ArithExp
 arithVar =
     succeed Var
         |= variable_
+
+
+arithArr : Parser ArithExp
+arithArr =
+    succeed Arr
+        -- TODO: Commas should be not '，' but ', '?
+        |= curlyBrackets (lazy (\_ -> arithArrElems))
+
+
+arithArrElems : Parser (List ArithExp)
+arithArrElems =
+    oneOf
+        [ arithExpSeq
+        , succeed []
+        ]
 
 
 boolExp : Parser BoolExp
@@ -279,7 +342,7 @@ boolFactor =
             |. symbol "＜"
             |. blanks
             |= arithExp
-        , parens (lazy (\_ -> boolExp))
+        , roundBrackets (lazy (\_ -> boolExp))
         ]
 
 

@@ -60,22 +60,10 @@ suite =
                     \_ ->
                         Parser.run variable_ "KOSU"
                             |> Expect.equal (Result.Ok (Const "KOSU"))
-                , test "can contain a underscore" <|
-                    \_ ->
-                        Parser.run variable_ "KOSU_GOKEI"
-                            |> Expect.equal (Result.Ok (Const "KOSU_GOKEI"))
-                , test "can contain a numeric" <|
-                    \_ ->
-                        Parser.run variable_ "KOSU0"
-                            |> Expect.equal (Result.Ok (Const "KOSU0"))
                 , test "can be a single uppercase" <|
                     \_ ->
                         Parser.run variable_ "N"
                             |> Expect.equal (Result.Ok (Const "N"))
-                , test "cannot start with an uppercase and contain lowercase" <|
-                    \_ ->
-                        Parser.run variable_ "Tokuten"
-                            |> Expect.equal (Result.Ok (Const "T"))
                 , test "cannot start with a numeric" <|
                     \_ ->
                         Parser.run variable_ "0_BAMME"
@@ -96,6 +84,103 @@ suite =
                     \_ ->
                         Parser.run variable_ "KOSU\u{3000}GOKEI"
                             |> Expect.equal (Result.Ok (Const "KOSU"))
+                ]
+            , describe "array"
+                [ test "starts with a uppercate" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten"
+                            |> Expect.equal (Result.Ok (Array "Tokuten" []))
+                , test "can contain a underscore" <|
+                    \_ ->
+                        Parser.run variable_ "Gokei_Tokuten"
+                            |> Expect.equal (Result.Ok (Array "Gokei_Tokuten" []))
+                , test "can contain a numeric" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten0"
+                            |> Expect.equal (Result.Ok (Array "Tokuten0" []))
+                , test "cannot start with a numeric" <|
+                    \_ ->
+                        Parser.run variable_ "0_Tokuten"
+                            |> Expect.err
+                , test "cannot start with a symbol" <|
+                    \_ ->
+                        Parser.run variable_ "_Tokuten"
+                            |> Expect.err
+                , test "cannot contain a symbol other than a underscore" <|
+                    \_ ->
+                        Parser.run variable_ "Gokei-Tokuten"
+                            |> Expect.equal (Result.Ok (Array "Gokei" []))
+                , test "cannot contain a single-byte space" <|
+                    \_ ->
+                        Parser.run variable_ "Gokei Tokuten"
+                            |> Expect.equal (Result.Ok (Array "Gokei" []))
+                , test "cannot contain a multi-byte space" <|
+                    \_ ->
+                        Parser.run variable_ "Gokei\u{3000}Tokuten"
+                            |> Expect.equal (Result.Ok (Array "Gokei" []))
+                , test "can have a following index" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[0]"
+                            |> Expect.equal (Result.Ok (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                , test "can have a following index with spaces" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[ 0 ]"
+                            |> Expect.equal (Result.Ok (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                , test "can have a following indices" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[0，1，2]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Array "Tokuten" [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                )
+                , test "can have a following indices with spaces" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[ 0， 1， 2 ]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Array "Tokuten" [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                )
+                , test "cannot have the empty bracket" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[]"
+                            |> Expect.err
+                , test "cannot have nested brackets" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[[0]]"
+                            |> Expect.err
+                , test "cannot have a separeted bracket" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten [0]"
+                            |> Expect.equal (Result.Ok (Array "Tokuten" []))
+                , test "can have an index of an arithmetic expression" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[i＋1]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Array "Tokuten" [ Plus (Var (Scalar "i")) (Lit (NumberVal 1)) ])
+                                )
+                , test "can have indices of arithmetic expressions without spaces" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[i＋1，j＋1]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Array "Tokuten"
+                                        [ Plus (Var (Scalar "i")) (Lit (NumberVal 1))
+                                        , Plus (Var (Scalar "j")) (Lit (NumberVal 1))
+                                        ]
+                                    )
+                                )
+                , test "can have an index of a string" <|
+                    \_ ->
+                        Parser.run variable_ "Tokuten[\"0\"]"
+                            |> Expect.equal (Result.Ok (Array "Tokuten" [ Lit (StringVal "0") ]))
+                , test "can have nexted brackets" <|
+                    \_ ->
+                        Parser.run variable_ "Gokei[Tokuten[0]]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Array "Gokei" [ Var (Array "Tokuten" [ Lit (NumberVal 0) ]) ])
+                                )
                 ]
             ]
         , describe "value"
@@ -164,8 +249,52 @@ suite =
                     \_ ->
                         Parser.run arithExp "kosu"
                             |> Expect.equal (Result.Ok (Var (Scalar "kosu")))
+                , test "parses an indexed variable" <|
+                    \_ ->
+                        Parser.run arithExp "Tokuten[0]"
+                            |> Expect.equal (Result.Ok (Var (Array "Tokuten" [ Lit (NumberVal 0) ])))
                 ]
-            , describe "parens"
+            , describe "arrays"
+                [ test "parses the empty array" <|
+                    \_ ->
+                        Parser.run arithExp "{}"
+                            |> Expect.equal (Result.Ok (Arr []))
+                , test "parses an array of a single nummeric element" <|
+                    \_ ->
+                        Parser.run arithExp "{0}"
+                            |> Expect.equal (Result.Ok (Arr [ Lit (NumberVal 0) ]))
+                , test "parses an array of multiple nummeric elements" <|
+                    \_ ->
+                        Parser.run arithExp "{0，1，2}"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Arr [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                )
+                , test "parses an array of multiple arithmetic expressions" <|
+                    \_ ->
+                        Parser.run arithExp "{i＋1，j＋2，k＋3}"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Arr
+                                        [ Plus (Var (Scalar "i")) (Lit (NumberVal 1))
+                                        , Plus (Var (Scalar "j")) (Lit (NumberVal 2))
+                                        , Plus (Var (Scalar "k")) (Lit (NumberVal 3))
+                                        ]
+                                    )
+                                )
+                , test "parses an nexted array" <|
+                    \_ ->
+                        Parser.run arithExp "{{100，200}，{300，400}}"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Arr
+                                        [ Arr [ Lit (NumberVal 100), Lit (NumberVal 200) ]
+                                        , Arr [ Lit (NumberVal 300), Lit (NumberVal 400) ]
+                                        ]
+                                    )
+                                )
+                ]
+            , describe "round brackets"
                 [ test "parses non-spaced parens" <|
                     \_ ->
                         Parser.run arithExp "(0)"
@@ -200,6 +329,20 @@ suite =
                     \_ ->
                         Parser.run arithExp "kosu0 ＋ kosu1"
                             |> Expect.equal (Result.Ok (Plus (Var (Scalar "kosu0")) (Var (Scalar "kosu1"))))
+                , test "parses 2-array addition" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei ＋ Tokuten"
+                            |> Expect.equal (Result.Ok (Plus (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
+                , test "parses indexed 2-array addition" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei[0] ＋ Tokuten[0]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Plus
+                                        (Var (Array "Gokei" [ Lit (NumberVal 0) ]))
+                                        (Var (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                                    )
+                                )
                 , test "parses 3-number addition without spaces" <|
                     \_ ->
                         Parser.run arithExp "0＋1＋2"
@@ -230,6 +373,20 @@ suite =
                     \_ ->
                         Parser.run arithExp "kosu0 － kosu1"
                             |> Expect.equal (Result.Ok (Minus (Var (Scalar "kosu0")) (Var (Scalar "kosu1"))))
+                , test "parses 2-array subtraction" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei － Tokuten"
+                            |> Expect.equal (Result.Ok (Minus (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
+                , test "parses indexed 2-array addition" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei[0] － Tokuten[0]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Minus
+                                        (Var (Array "Gokei" [ Lit (NumberVal 0) ]))
+                                        (Var (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                                    )
+                                )
                 , test "parses 3-number subtraction without spaces" <|
                     \_ ->
                         Parser.run arithExp "0－1－2"
@@ -260,6 +417,20 @@ suite =
                     \_ ->
                         Parser.run arithExp "kosu0 × kosu1"
                             |> Expect.equal (Result.Ok (Times (Var (Scalar "kosu0")) (Var (Scalar "kosu1"))))
+                , test "parses 2-array multiplication" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei × Tokuten"
+                            |> Expect.equal (Result.Ok (Times (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
+                , test "parses indexed 2-array addition" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei[0] × Tokuten[0]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Times
+                                        (Var (Array "Gokei" [ Lit (NumberVal 0) ]))
+                                        (Var (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                                    )
+                                )
                 , test "parses 3-number multiplication without spaces" <|
                     \_ ->
                         Parser.run arithExp "0×1×2"
@@ -290,6 +461,20 @@ suite =
                     \_ ->
                         Parser.run arithExp "kosu0 ÷ kosu1"
                             |> Expect.equal (Result.Ok (Quot (Var (Scalar "kosu0")) (Var (Scalar "kosu1"))))
+                , test "parses 2-array quotient" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei ÷ Tokuten"
+                            |> Expect.equal (Result.Ok (Quot (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
+                , test "parses indexed 2-array quotient" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei[0] ÷ Tokuten[0]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Quot
+                                        (Var (Array "Gokei" [ Lit (NumberVal 0) ]))
+                                        (Var (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                                    )
+                                )
                 , test "parses 3-number quotient without spaces" <|
                     \_ ->
                         Parser.run arithExp "0÷1÷2"
@@ -324,6 +509,20 @@ suite =
                     \_ ->
                         Parser.run arithExp "0％1％2"
                             |> Expect.equal (Result.Ok (Mod (Mod (Lit (NumberVal 0)) (Lit (NumberVal 1))) (Lit (NumberVal 2))))
+                , test "parses 2-array remainder" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei ％ Tokuten"
+                            |> Expect.equal (Result.Ok (Mod (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
+                , test "parses indexed 2-array remainder" <|
+                    \_ ->
+                        Parser.run arithExp "Gokei[0] ％ Tokuten[0]"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Mod
+                                        (Var (Array "Gokei" [ Lit (NumberVal 0) ]))
+                                        (Var (Array "Tokuten" [ Lit (NumberVal 0) ]))
+                                    )
+                                )
                 , test "parses 3-number remainder with spaces" <|
                     \_ ->
                         Parser.run arithExp "0 ％ 1 ％ 2"

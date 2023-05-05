@@ -57,7 +57,7 @@ type alias Model =
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { sourceCode = euclid
+    ( { sourceCode = bubbleSort
       , output = []
       , execState = Stopped
       }
@@ -86,6 +86,24 @@ y ≠ 0 の間，
 を繰り返す
 
 "gcd(" と copy_x と ", " と copy_y と ") = " と x を表示する"""
+
+
+bubbleSort : SourceCode
+bubbleSort =
+    """Arr ← {7， 2， 1， 4， 0， 5， 6， 3}
+
+i を 6 から 0 まで 1 ずつ減らしながら，
+    j を 0 から i まで 1 ずつ増やしながら，
+        もし Arr[j] ＞ Arr[j ＋ 1] ならば
+            "Arr = " と Arr を表示する
+            tmp ← Arr[j]
+            Arr[j] ← Arr[j ＋ 1]
+            Arr[j ＋ 1] ← tmp
+        を実行する
+    を繰り返す
+を繰り返す
+
+"Arr = " と Arr を表示する"""
 
 
 type Msg
