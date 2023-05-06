@@ -211,10 +211,18 @@ suite =
                     \_ ->
                         Parser.run value "「見つかりました」"
                             |> Expect.equal (Result.Ok (StringVal "見つかりました"))
+                , test "is surrounded by kagikakkoes and empty" <|
+                    \_ ->
+                        Parser.run value "「」"
+                            |> Expect.equal (Result.Ok (StringVal ""))
                 , test "is surrounded by doublequotes" <|
                     \_ ->
                         Parser.run value "\"It was found.\""
                             |> Expect.equal (Result.Ok (StringVal "It was found."))
+                , test "is surrounded by doublequotes and empty" <|
+                    \_ ->
+                        Parser.run value "\"\""
+                            |> Expect.equal (Result.Ok (StringVal ""))
                 , test "cannot start with a multi-byte other than hirakikakko" <|
                     \_ ->
                         Parser.run value "『見つかりました』"

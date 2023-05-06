@@ -123,11 +123,14 @@ stringValJa : Parser Value
 stringValJa =
     succeed StringVal
         |. symbol "「"
-        |= variable
-            { start = \c -> True
-            , inner = \c -> c /= '」'
-            , reserved = Set.empty
-            }
+        |= oneOf
+            [ variable
+                { start = \c -> c /= '」'
+                , inner = \c -> c /= '」'
+                , reserved = Set.empty
+                }
+            , succeed ""
+            ]
         |. symbol "」"
 
 
@@ -135,11 +138,14 @@ stringValEn : Parser Value
 stringValEn =
     succeed StringVal
         |. symbol "\""
-        |= variable
-            { start = \c -> True
-            , inner = \c -> c /= '"'
-            , reserved = Set.empty
-            }
+        |= oneOf
+            [ variable
+                { start = \c -> c /= '"'
+                , inner = \c -> c /= '"'
+                , reserved = Set.empty
+                }
+            , succeed ""
+            ]
         |. symbol "\""
 
 
