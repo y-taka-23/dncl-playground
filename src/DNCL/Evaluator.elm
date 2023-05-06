@@ -1,8 +1,8 @@
 module DNCL.Evaluator exposing
     ( Evaluator
     , Exception(..)
-    , Output
     , StepResult(..)
+    , flushBuffer
     , load
     , step
     )
@@ -16,7 +16,7 @@ import Result.Extra as Result
 type alias Evaluator =
     { continuation : DNCLProgram
     , variables : Variables
-    , output : Output
+    , output : Buffer
     }
 
 
@@ -24,8 +24,19 @@ type alias Variables =
     Dict Name Value
 
 
-type alias Output =
-    List String
+type alias Buffer =
+    { buffer : String
+    , lines : List String
+    }
+
+
+flushBuffer : Buffer -> List String
+flushBuffer buf =
+    if String.isEmpty buf.buffer then
+        buf.lines
+
+    else
+        buf.buffer :: buf.lines
 
 
 type StepResult
@@ -47,7 +58,7 @@ load : DNCLProgram -> Evaluator
 load prog =
     { continuation = prog
     , variables = Dict.empty
-    , output = []
+    , output = { buffer = "", lines = [] }
     }
 
 
@@ -70,6 +81,18 @@ step ev =
                         Ok vs ->
                             Ok <| Continued { ev | continuation = stmts, variables = vs }
 
+        (PrintLn ps) :: stmts ->
+            case format ev.variables ps of
+                Err e ->
+                    Err e
+
+                Ok s ->
+                    let
+                        out =
+                            { buffer = "", lines = (ev.output.buffer ++ s) :: ev.output.lines }
+                    in
+                    Ok <| Continued { ev | continuation = stmts, output = out }
+
         (Print ps) :: stmts ->
             case format ev.variables ps of
                 Err e ->
@@ -78,7 +101,7 @@ step ev =
                 Ok s ->
                     let
                         out =
-                            s :: ev.output
+                            { buffer = ev.output.buffer ++ s, lines = ev.output.lines }
                     in
                     Ok <| Continued { ev | continuation = stmts, output = out }
 

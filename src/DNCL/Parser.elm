@@ -358,6 +358,7 @@ lineStatement : Parser Statement
 lineStatement =
     oneOf
         [ assign
+        , printLn
         , print
         , increment
         , decrement
@@ -386,11 +387,22 @@ assign =
         |= arithExp
 
 
+printLn : Parser Statement
+printLn =
+    succeed (\p ps -> PrintLn (Nonempty p ps))
+        |= backtrackable printable
+        |= backtrackable (loop [] printableLoop)
+        |. backtrackable blanks
+        |. symbol "を表示する"
+
+
 print : Parser Statement
 print =
     succeed (\p ps -> Print (Nonempty p ps))
         |= backtrackable printable
-        |= loop [] printableLoop
+        |= backtrackable (loop [] printableLoop)
+        |. backtrackable blanks
+        |. symbol "を改行なしで表示する"
 
 
 printableLoop : List Printable -> Parser (Step (List Printable) (List Printable))
@@ -402,8 +414,6 @@ printableLoop ps =
             |. blanks
             |= printable
         , succeed (Done (List.reverse ps))
-            |. backtrackable blanks
-            |. symbol "を表示する"
         ]
 
 

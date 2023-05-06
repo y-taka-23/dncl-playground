@@ -62,6 +62,7 @@ type alias Procedure =
 
 type Statement
     = Assign Variable ArithExp
+    | PrintLn (Nonempty Printable)
     | Print (Nonempty Printable)
     | Increment Variable ArithExp
     | Decrement Variable ArithExp

@@ -2,7 +2,15 @@ module Main exposing (..)
 
 import Browser
 import DNCL.AST exposing (DNCLProgram, SourceCode)
-import DNCL.Evaluator exposing (Evaluator, Exception(..), Output, StepResult(..), load, step)
+import DNCL.Evaluator
+    exposing
+        ( Evaluator
+        , Exception(..)
+        , StepResult(..)
+        , flushBuffer
+        , load
+        , step
+        )
 import DNCL.Example exposing (..)
 import DNCL.Parser exposing (parse)
 import Debug
@@ -47,7 +55,7 @@ type ExecState
 
 type alias Model =
     { sourceCode : SourceCode
-    , output : Output
+    , log : List String
     , execState : ExecState
     }
 
@@ -55,7 +63,7 @@ type alias Model =
 init : flags -> ( Model, Cmd Msg )
 init _ =
     ( { sourceCode = pastExam2023
-      , output = []
+      , log = []
       , execState = Stopped
       }
     , Cmd.none
@@ -91,10 +99,10 @@ update msg model =
         RunProgram now ->
             case parse model.sourceCode of
                 Nothing ->
-                    ( { model | output = [ "構文エラーです" ], execState = Stopped }, Cmd.none )
+                    ( { model | log = [ "構文エラーです" ], execState = Stopped }, Cmd.none )
 
                 Just prog ->
-                    ( { model | output = [], execState = Running { since = now, evaluator = load prog } }
+                    ( { model | log = [], execState = Running { since = now, evaluator = load prog } }
                     , Cmd.none
                     )
 
@@ -105,22 +113,22 @@ update msg model =
 
                 Running exec ->
                     if Time.posixToMillis current - Time.posixToMillis exec.since > timeoutSeconds * 1000 then
-                        ( { model | output = "制限時間を超過しました" :: model.output, execState = Stopped }
+                        ( { model | log = "制限時間を超過しました" :: model.log, execState = Stopped }
                         , Cmd.none
                         )
 
                     else
                         case step exec.evaluator of
                             Err _ ->
-                                ( { model | output = "実行時エラーです" :: model.output, execState = Stopped }
+                                ( { model | log = "実行時エラーです" :: model.log, execState = Stopped }
                                 , Cmd.none
                                 )
 
                             Ok (Completed end) ->
-                                ( { model | output = end.output, execState = Stopped }, Cmd.none )
+                                ( { model | log = flushBuffer end.output, execState = Stopped }, Cmd.none )
 
                             Ok (Continued next) ->
-                                ( { model | output = next.output, execState = Running { exec | evaluator = next } }
+                                ( { model | log = flushBuffer next.output, execState = Running { exec | evaluator = next } }
                                 , Cmd.none
                                 )
 
@@ -148,7 +156,7 @@ view model =
             [ header
             , row [ width fill, height fill ]
                 [ inputPanel model
-                , outputPanel model.output
+                , logPanel model.log
                 ]
             ]
 
@@ -304,8 +312,8 @@ toolbar =
             }
 
 
-outputPanel : Output -> Element msg
-outputPanel out =
+logPanel : List String -> Element msg
+logPanel log =
     column
         [ width <| maximum 550 fill
         , height fill
@@ -336,7 +344,7 @@ outputPanel out =
             ]
           <|
             List.map Element.text <|
-                List.reverse out
+                List.reverse log
         ]
 
 
