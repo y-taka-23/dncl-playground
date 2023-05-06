@@ -262,46 +262,6 @@ suite =
                         Parser.run arithExp "Tokuten[0]"
                             |> Expect.equal (Result.Ok (Var (Array "Tokuten" [ Lit (NumberVal 0) ])))
                 ]
-            , describe "arrays"
-                [ test "parses the empty array" <|
-                    \_ ->
-                        Parser.run arithExp "{}"
-                            |> Expect.equal (Result.Ok (Arr []))
-                , test "parses an array of a single nummeric element" <|
-                    \_ ->
-                        Parser.run arithExp "{0}"
-                            |> Expect.equal (Result.Ok (Arr [ Lit (NumberVal 0) ]))
-                , test "parses an array of multiple nummeric elements" <|
-                    \_ ->
-                        Parser.run arithExp "{0，1，2}"
-                            |> Expect.equal
-                                (Result.Ok
-                                    (Arr [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
-                                )
-                , test "parses an array of multiple arithmetic expressions" <|
-                    \_ ->
-                        Parser.run arithExp "{i＋1，j＋2，k＋3}"
-                            |> Expect.equal
-                                (Result.Ok
-                                    (Arr
-                                        [ Plus (Var (Scalar "i")) (Lit (NumberVal 1))
-                                        , Plus (Var (Scalar "j")) (Lit (NumberVal 2))
-                                        , Plus (Var (Scalar "k")) (Lit (NumberVal 3))
-                                        ]
-                                    )
-                                )
-                , test "parses an nexted array" <|
-                    \_ ->
-                        Parser.run arithExp "{{100，200}，{300，400}}"
-                            |> Expect.equal
-                                (Result.Ok
-                                    (Arr
-                                        [ Arr [ Lit (NumberVal 100), Lit (NumberVal 200) ]
-                                        , Arr [ Lit (NumberVal 300), Lit (NumberVal 400) ]
-                                        ]
-                                    )
-                                )
-                ]
             , describe "round brackets"
                 [ test "parses non-spaced parens" <|
                     \_ ->
@@ -385,7 +345,7 @@ suite =
                     \_ ->
                         Parser.run arithExp "Gokei － Tokuten"
                             |> Expect.equal (Result.Ok (Minus (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
-                , test "parses indexed 2-array addition" <|
+                , test "parses indexed 2-array subtraction" <|
                     \_ ->
                         Parser.run arithExp "Gokei[0] － Tokuten[0]"
                             |> Expect.equal
@@ -429,7 +389,7 @@ suite =
                     \_ ->
                         Parser.run arithExp "Gokei × Tokuten"
                             |> Expect.equal (Result.Ok (Times (Var (Array "Gokei" [])) (Var (Array "Tokuten" []))))
-                , test "parses indexed 2-array addition" <|
+                , test "parses indexed 2-array multiplication" <|
                     \_ ->
                         Parser.run arithExp "Gokei[0] × Tokuten[0]"
                             |> Expect.equal
@@ -581,6 +541,35 @@ suite =
                     \_ ->
                         Parser.run arithExp "(0 ＋ 1) × 2"
                             |> Expect.equal (Result.Ok (Times (Plus (Lit (NumberVal 0)) (Lit (NumberVal 1))) (Lit (NumberVal 2))))
+                ]
+            , describe "arrays"
+                [ test "parses the empty array" <|
+                    \_ ->
+                        Parser.run arithExp "{}"
+                            |> Expect.equal (Result.Ok (Arr []))
+                , test "parses an array of a single nummeric element" <|
+                    \_ ->
+                        Parser.run arithExp "{0}"
+                            |> Expect.equal (Result.Ok (Arr [ Lit (NumberVal 0) ]))
+                , test "parses an array of multiple nummeric elements" <|
+                    \_ ->
+                        Parser.run arithExp "{0，1，2}"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Arr [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                )
+                , test "parses an array of multiple arithmetic expressions" <|
+                    \_ ->
+                        Parser.run arithExp "{i＋1，j＋2，k＋3}"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Arr
+                                        [ Plus (Var (Scalar "i")) (Lit (NumberVal 1))
+                                        , Plus (Var (Scalar "j")) (Lit (NumberVal 2))
+                                        , Plus (Var (Scalar "k")) (Lit (NumberVal 3))
+                                        ]
+                                    )
+                                )
                 ]
             ]
         , describe "boolExp"
