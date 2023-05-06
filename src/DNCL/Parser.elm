@@ -366,6 +366,7 @@ lineStatement =
         [ assign
         , printLn
         , print
+        , printNewLine
         , increment
         , decrement
         ]
@@ -421,6 +422,12 @@ printableLoop ps =
             |= printable
         , succeed (Done (List.reverse ps))
         ]
+
+
+printNewLine : Parser Statement
+printNewLine =
+    succeed PrintNewLine
+        |. symbol "改行を表示する"
 
 
 printable : Parser Printable

@@ -796,6 +796,26 @@ suite =
                             ]
                             |> Expect.equal (Result.Ok [ "01" ])
                 ]
+            , describe "print new line"
+                [ test "outputs a new line initially" <|
+                    \_ ->
+                        run [ PrintNewLine ]
+                            |> Expect.equal (Result.Ok [ "" ])
+                , test "outputs a new line after print statement" <|
+                    \_ ->
+                        run
+                            [ Print (singleton (PrintVal (NumberVal 0)))
+                            , PrintNewLine
+                            ]
+                            |> Expect.equal (Result.Ok [ "0" ])
+                , test "outputs a new line after print-line statement" <|
+                    \_ ->
+                        run
+                            [ PrintLn (singleton (PrintVal (NumberVal 0)))
+                            , PrintNewLine
+                            ]
+                            |> Expect.equal (Result.Ok [ "", "0" ])
+                ]
             , describe "increment"
                 [ fuzz (pair int int) "increments a value of the variable" <|
                     \( n, m ) ->

@@ -64,6 +64,7 @@ type Statement
     = Assign Variable ArithExp
     | PrintLn (Nonempty Printable)
     | Print (Nonempty Printable)
+    | PrintNewLine
     | Increment Variable ArithExp
     | Decrement Variable ArithExp
     | If BoolExp Procedure

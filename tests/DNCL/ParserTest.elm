@@ -1022,6 +1022,12 @@ suite =
                                     )
                                 )
                 ]
+            , describe "print new line"
+                [ test "parses print-new-line statement" <|
+                    \_ ->
+                        Parser.run statement "改行を表示する"
+                            |> Expect.equal (Result.Ok PrintNewLine)
+                ]
             , describe "increment"
                 [ test "parses increment statement without spaces" <|
                     \_ ->

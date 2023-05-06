@@ -105,6 +105,13 @@ step ev =
                     in
                     Ok <| Continued { ev | continuation = stmts, output = out }
 
+        PrintNewLine :: stmts ->
+            let
+                out =
+                    { buffer = "", lines = ev.output.buffer :: ev.output.lines }
+            in
+            Ok <| Continued { ev | continuation = stmts, output = out }
+
         (Increment v aexp) :: stmts ->
             let
                 stmt =
