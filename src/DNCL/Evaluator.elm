@@ -515,24 +515,19 @@ opNums op r1 r2 =
             Err UnsupportedOperation
 
 
-format : SymbolTable -> Nonempty Printable -> Result Exception String
-format st ps =
+format : SymbolTable -> Nonempty ArithExp -> Result Exception String
+format st aexps =
     let
         concat r1 r2 =
             -- List.Nonempty.foldl1 accumulates items in the reverse order
             Result.map2 (\x y -> y ++ x) r1 r2
     in
-    Nonempty.foldl1 concat <| Nonempty.map (formatItem st) ps
+    Nonempty.foldl1 concat <| Nonempty.map (formatExp st) aexps
 
 
-formatItem : SymbolTable -> Printable -> Result Exception String
-formatItem st p =
-    case p of
-        PrintVal val ->
-            Ok <| formatValue val
-
-        PrintVar v ->
-            Result.map formatValue <| lookupVar st v
+formatExp : SymbolTable -> ArithExp -> Result Exception String
+formatExp st aexp =
+    Result.map formatValue <| evalArith st aexp
 
 
 formatValue : Value -> String

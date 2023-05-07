@@ -991,35 +991,35 @@ suite =
                 [ test "parses print-line statement for a Japanese string value without spaces" <|
                     \_ ->
                         Parser.run statement "「整いました」を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (StringVal "整いました")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (StringVal "整いました")))))
                 , test "parses print-line statement for a Japanese string value with spaces" <|
                     \_ ->
                         Parser.run statement "「整いました」 を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (StringVal "整いました")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (StringVal "整いました")))))
                 , test "parses print-line statement for an English string value without spaces" <|
                     \_ ->
                         Parser.run statement "\"It was found.\"を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (StringVal "It was found.")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (StringVal "It was found.")))))
                 , test "parses print-line statement for an English string value with spaces" <|
                     \_ ->
                         Parser.run statement "\"It was found.\" を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (StringVal "It was found.")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (StringVal "It was found.")))))
                 , test "parses print-line statement for a numeric value without spaces" <|
                     \_ ->
                         Parser.run statement "3を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (NumberVal 3)))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (NumberVal 3)))))
                 , test "parses print-line statement for a numeric value with spaces" <|
                     \_ ->
                         Parser.run statement "3 を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVal (NumberVal 3)))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Lit (NumberVal 3)))))
                 , test "parses print-line statement for a Scalar without spaces" <|
                     \_ ->
                         Parser.run statement "kosuを表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVar (Scalar "kosu")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Var (Scalar "kosu")))))
                 , test "parses print-line statement for a Scalar value with spaces" <|
                     \_ ->
                         Parser.run statement "kosu を表示する"
-                            |> Expect.equal (Result.Ok (PrintLn (singleton (PrintVar (Scalar "kosu")))))
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Var (Scalar "kosu")))))
                 , test "parses print-line statement for 2 items" <|
                     \_ ->
                         Parser.run statement "kosu と「個見つかった」を表示する"
@@ -1027,45 +1027,85 @@ suite =
                                 (Result.Ok
                                     (PrintLn
                                         (Nonempty
-                                            (PrintVar (Scalar "kosu"))
-                                            [ PrintVal (StringVal "個見つかった") ]
+                                            (Var (Scalar "kosu"))
+                                            [ Lit (StringVal "個見つかった") ]
                                         )
                                     )
                                 )
+                , test "parsers print-line statement for the empty array" <|
+                    \_ ->
+                        Parser.run statement "{} を表示する"
+                            |> Expect.equal (Result.Ok (PrintLn (singleton (Arr []))))
+                , test "parsers print-line statement for a non-empty array" <|
+                    \_ ->
+                        Parser.run statement "{0，1，2} を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PrintLn
+                                        (singleton
+                                            (Arr [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                        )
+                                    )
+                                )
+                , test "parsers print-line statement for arithmetic operation" <|
+                    \_ ->
+                        Parser.run statement "0 ＋ 1 を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PrintLn (singleton (Plus (Lit (NumberVal 0)) (Lit (NumberVal 1)))))
+                                )
+                , test "parsers print-line statement for function invokation with spaces" <|
+                    \_ ->
+                        Parser.run statement "二乗 (0) を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PrintLn (singleton (Fun (Function "二乗") [ Lit (NumberVal 0) ])))
+                                )
+                , test "parsers print-line statement for function invokation without spaces" <|
+                    \_ ->
+                        Parser.run statement "二乗(0)を表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (PrintLn (singleton (Fun (Function "二乗") [ Lit (NumberVal 0) ])))
+                                )
+                , test "throws an exception when the args of the function are missing" <|
+                    \_ ->
+                        Parser.run statement "二乗を表示する"
+                            |> Expect.err
                 ]
             , describe "print"
                 [ test "parses print statement for a Japanese string value without spaces" <|
                     \_ ->
                         Parser.run statement "「整いました」を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "整いました")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (StringVal "整いました")))))
                 , test "parses print statement for a Japanese string value with spaces" <|
                     \_ ->
                         Parser.run statement "「整いました」 を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "整いました")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (StringVal "整いました")))))
                 , test "parses print statement for an English string value without spaces" <|
                     \_ ->
                         Parser.run statement "\"It was found.\"を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "It was found.")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (StringVal "It was found.")))))
                 , test "parses print statement for an English string value with spaces" <|
                     \_ ->
                         Parser.run statement "\"It was found.\" を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (StringVal "It was found.")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (StringVal "It was found.")))))
                 , test "parses print statement for a numeric value without spaces" <|
                     \_ ->
                         Parser.run statement "3を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (NumberVal 3)))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (NumberVal 3)))))
                 , test "parses print statement for a numeric value with spaces" <|
                     \_ ->
                         Parser.run statement "3 を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVal (NumberVal 3)))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Lit (NumberVal 3)))))
                 , test "parses print statement for a Scalar without spaces" <|
                     \_ ->
                         Parser.run statement "kosuを改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVar (Scalar "kosu")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Var (Scalar "kosu")))))
                 , test "parses print statement for a Scalar value with spaces" <|
                     \_ ->
                         Parser.run statement "kosu を改行なしで表示する"
-                            |> Expect.equal (Result.Ok (Print (singleton (PrintVar (Scalar "kosu")))))
+                            |> Expect.equal (Result.Ok (Print (singleton (Var (Scalar "kosu")))))
                 , test "parses print statement for 2 items" <|
                     \_ ->
                         Parser.run statement "kosu と「個見つかった」を改行なしで表示する"
@@ -1073,11 +1113,51 @@ suite =
                                 (Result.Ok
                                     (Print
                                         (Nonempty
-                                            (PrintVar (Scalar "kosu"))
-                                            [ PrintVal (StringVal "個見つかった") ]
+                                            (Var (Scalar "kosu"))
+                                            [ Lit (StringVal "個見つかった") ]
                                         )
                                     )
                                 )
+                , test "parsers print statement for the empty array" <|
+                    \_ ->
+                        Parser.run statement "{} を改行なしで表示する"
+                            |> Expect.equal (Result.Ok (Print (singleton (Arr []))))
+                , test "parsers print statement for a non-empty array" <|
+                    \_ ->
+                        Parser.run statement "{0，1，2} を改行なしで表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print
+                                        (singleton
+                                            (Arr [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ])
+                                        )
+                                    )
+                                )
+                , test "parsers print statement for arithmetic operation" <|
+                    \_ ->
+                        Parser.run statement "0 ＋ 1 を改行なしで表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print (singleton (Plus (Lit (NumberVal 0)) (Lit (NumberVal 1)))))
+                                )
+                , test "parsers print statement for function invokation with spaces" <|
+                    \_ ->
+                        Parser.run statement "二乗 (0) を改行なしで表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print (singleton (Fun (Function "二乗") [ Lit (NumberVal 0) ])))
+                                )
+                , test "parsers print statement for function invokation without spaces" <|
+                    \_ ->
+                        Parser.run statement "二乗(0)を改行なしで表示する"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Print (singleton (Fun (Function "二乗") [ Lit (NumberVal 0) ])))
+                                )
+                , test "throws an exception when the args of the function are missing" <|
+                    \_ ->
+                        Parser.run statement "二乗を表示する"
+                            |> Expect.err
                 ]
             , describe "print new line"
                 [ test "parses print-new-line statement" <|
@@ -1735,7 +1815,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1755,7 +1835,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1775,7 +1855,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1795,7 +1875,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1878,7 +1958,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1898,7 +1978,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1918,7 +1998,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1938,7 +2018,7 @@ suite =
                                         (Lit (NumberVal 1))
                                         [ Assign (Scalar "gokei")
                                             (Plus (Var (Scalar "gokei")) (Var (Scalar "x")))
-                                        , PrintLn (singleton (PrintVar (Scalar "x")))
+                                        , PrintLn (singleton (Var (Scalar "x")))
                                         ]
                                     )
                                 )
@@ -1961,19 +2041,19 @@ suite =
                 \_ ->
                     Parser.run dnclProgram
                         """ 「こんにちは、世界」を表示する"""
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
             , test "parses a single statment with proceding line break" <|
                 \_ ->
                     Parser.run dnclProgram
                         """
                             「こんにちは、世界」を表示する"""
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
             , test "parses a single statement with succeeding line break" <|
                 \_ ->
                     Parser.run dnclProgram
                         """ 「こんにちは、世界」を表示する
                         """
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (PrintVal (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
             , test "parses multiple line-statements" <|
                 \_ ->
                     Parser.run dnclProgram
@@ -1983,7 +2063,7 @@ suite =
                         |> Expect.equal
                             (Result.Ok
                                 [ Assign (Scalar "x") (Lit (NumberVal 42))
-                                , PrintLn (Nonempty (PrintVar (Scalar "x")) [])
+                                , PrintLn (Nonempty (Var (Scalar "x")) [])
                                 ]
                             )
             , test "parses multiple block-statements" <|
@@ -2031,7 +2111,7 @@ suite =
                             (Result.Ok
                                 [ If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
                                     [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                , PrintLn (Nonempty (PrintVar (Scalar "x")) [])
+                                , PrintLn (Nonempty (Var (Scalar "x")) [])
                                 ]
                             )
             , test "cannot parse a program with a trailing erroneous fragment" <|

@@ -147,8 +147,8 @@ function : Parser Function
 function =
     succeed Function
         |= variable
-            { start = \c -> Char.toCode c > 0x70
-            , inner = \c -> Char.toCode c > 0x70
+            { start = \c -> Char.toCode c > 0x7F
+            , inner = \c -> Char.toCode c > 0x7F
             , reserved = Set.empty
             }
 
@@ -416,8 +416,8 @@ assign =
 printLn : Parser Statement
 printLn =
     succeed (\p ps -> PrintLn (Nonempty p ps))
-        |= backtrackable printable
-        |= backtrackable (loop [] printableLoop)
+        |= backtrackable arithExp
+        |= backtrackable (loop [] printLoop)
         |. backtrackable blanks
         |. symbol "を表示する"
 
@@ -425,20 +425,20 @@ printLn =
 print : Parser Statement
 print =
     succeed (\p ps -> Print (Nonempty p ps))
-        |= backtrackable printable
-        |= backtrackable (loop [] printableLoop)
+        |= backtrackable arithExp
+        |= backtrackable (loop [] printLoop)
         |. backtrackable blanks
         |. symbol "を改行なしで表示する"
 
 
-printableLoop : List Printable -> Parser (Step (List Printable) (List Printable))
-printableLoop ps =
+printLoop : List ArithExp -> Parser (Step (List ArithExp) (List ArithExp))
+printLoop ps =
     oneOf
         [ succeed (\p -> Loop (p :: ps))
             |. backtrackable blanks
             |. symbol "と"
             |. blanks
-            |= printable
+            |= arithExp
         , succeed (Done (List.reverse ps))
         ]
 
@@ -447,16 +447,6 @@ printNewLine : Parser Statement
 printNewLine =
     succeed PrintNewLine
         |. symbol "改行を表示する"
-
-
-printable : Parser Printable
-printable =
-    oneOf
-        [ succeed PrintVar
-            |= variable_
-        , succeed PrintVal
-            |= value
-        ]
 
 
 increment : Parser Statement

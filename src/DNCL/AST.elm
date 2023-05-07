@@ -32,11 +32,6 @@ type Function
     = Function Name
 
 
-type Printable
-    = PrintVal Value
-    | PrintVar Variable
-
-
 type ArithExp
     = Lit Value
     | Var Variable
@@ -67,8 +62,8 @@ type alias Procedure =
 
 type Statement
     = Assign Variable ArithExp
-    | PrintLn (Nonempty Printable)
-    | Print (Nonempty Printable)
+    | PrintLn (Nonempty ArithExp)
+    | Print (Nonempty ArithExp)
     | PrintNewLine
     | Increment Variable ArithExp
     | Decrement Variable ArithExp

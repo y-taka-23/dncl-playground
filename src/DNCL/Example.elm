@@ -30,7 +30,7 @@ bubbleSort : SourceCode
 bubbleSort =
     """Arr ← {7， 2， 1， 4， 0， 5， 6， 3}
 
-i を 6 から 0 まで 1 ずつ減らしながら，
+i を 要素数(Arr) － 2 から 0 まで 1 ずつ減らしながら，
     j を 0 から i まで 1 ずつ増やしながら，
         もし Arr[j] ＞ Arr[j ＋ 1] ならば
             "Arr = " と Arr を表示する
