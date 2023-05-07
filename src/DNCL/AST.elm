@@ -28,6 +28,10 @@ type Value
     | ArrayVal (Dict Index Value)
 
 
+type Function
+    = Function Name
+
+
 type Printable
     = PrintVal Value
     | PrintVar Variable
@@ -42,6 +46,7 @@ type ArithExp
     | Quot ArithExp ArithExp
     | Mod ArithExp ArithExp
     | Arr (List ArithExp)
+    | Fun Function (List ArithExp)
 
 
 type BoolExp

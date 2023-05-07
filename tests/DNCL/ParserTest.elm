@@ -571,6 +571,74 @@ suite =
                                     )
                                 )
                 ]
+            , describe "function"
+                [ test "parses a function with a single value arg" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (0)"
+                            |> Expect.equal (Result.Ok (Fun (Function "二乗") [ Lit (NumberVal 0) ]))
+                , test "parses a function with a single scalar variable arg" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (x)"
+                            |> Expect.equal (Result.Ok (Fun (Function "二乗") [ Var (Scalar "x") ]))
+                , test "parses a function with a single array variable arg" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (MyArr[0])"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Fun (Function "二乗") [ Var (Array "MyArr" [ Lit (NumberVal 0) ]) ])
+                                )
+                , test "parses a function with multiple value args" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (0，1)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Fun (Function "二乗") [ Lit (NumberVal 0), Lit (NumberVal 1) ])
+                                )
+                , test "parses a function with multiple scalar variable args" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (x，y)"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Fun (Function "二乗") [ Var (Scalar "x"), Var (Scalar "y") ])
+                                )
+                , test "parses a function with multiple array variable args" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (MyArr[0]，MyArr[1])"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Fun (Function "二乗")
+                                        [ Var (Array "MyArr" [ Lit (NumberVal 0) ])
+                                        , Var (Array "MyArr" [ Lit (NumberVal 1) ])
+                                        ]
+                                    )
+                                )
+                , test "parses a function without a space" <|
+                    \_ ->
+                        Parser.run arithExp "二乗(0)"
+                            |> Expect.equal (Result.Ok (Fun (Function "二乗") [ Lit (NumberVal 0) ]))
+                , test "parses a function with optional spaces" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 ( 0， 1 )"
+                            |> Expect.equal (Result.Ok (Fun (Function "二乗") [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
+                , test "parses nested functions" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 (べき乗 (0))"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Fun (Function "二乗")
+                                        [ Fun (Function "べき乗") [ Lit (NumberVal 0) ]
+                                        ]
+                                    )
+                                )
+                , test "parses a function with no arg" <|
+                    \_ ->
+                        Parser.run arithExp "二乗 ()"
+                            |> Expect.equal (Result.Ok (Fun (Function "二乗") []))
+                , test "cannot parse a function of ascii name" <|
+                    \_ ->
+                        Parser.run arithExp "square (0)"
+                            |> Expect.equal (Result.Ok (Var (Scalar "square")))
+                ]
             ]
         , describe "boolExp"
             [ describe "parens"

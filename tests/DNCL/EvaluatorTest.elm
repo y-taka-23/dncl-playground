@@ -301,6 +301,18 @@ suite =
                                 (Result.Err
                                     (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
                                 )
+                , test "throws an exception when it comes to an undefined function" <|
+                    \_ ->
+                        run [ Assign (Scalar "x") (Fun (Function "未定義") [ Lit (NumberVal 0) ]) ]
+                            |> Expect.equal (Result.Err (UndefinedFunction (Function "未定義")))
+                , test "throws an exception when it comes to undefined arguments" <|
+                    \_ ->
+                        run [ Assign (Scalar "x") (Fun (Function "二乗") [ Var (Scalar "y") ]) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "y")))
+                , test "throws an exception about args when its name and args are both undefined" <|
+                    \_ ->
+                        run [ Assign (Scalar "x") (Fun (Function "未定義") [ Var (Scalar "y") ]) ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Scalar "y")))
                 , test "assigns values to multiple variables individually" <|
                     \_ ->
                         run
@@ -1474,6 +1486,174 @@ suite =
                                 []
                             ]
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
+                ]
+            ]
+        , describe "build-in functions"
+            [ describe "二乗" <|
+                [ test "calculates the square of the arg" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (NumberVal 3) ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "9" ])
+                , test "throws an exception if invoked with no args" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "二乗") []) ]
+                            |> Expect.equal (Result.Err (InvalidArgument []))
+                , test "throws an exception if invoked with 2 args" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (NumberVal 0), Lit (NumberVal 1) ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0, NumberVal 1 ]))
+                , test "throws an exception if invoked with a string arg" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (StringVal "0") ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0" ]))
+                , test "throws an exception if invoked with an array arg" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
+                        in
+                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit arr ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ arr ]))
+                ]
+            , describe "べき乗" <|
+                [ test "calculates the power of the args" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (NumberVal 2), Lit (NumberVal 3) ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "8" ])
+                , test "throws an exception if invoked with no args" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "べき乗") []) ]
+                            |> Expect.equal (Result.Err (InvalidArgument []))
+                , test "throws an exception if invoked with 1 arg" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (NumberVal 0) ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0 ]))
+                , test "throws an exception if invoked with 3 args" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res")
+                                (Fun (Function "べき乗")
+                                    [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ]
+                                )
+                            ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0, NumberVal 1, NumberVal 2 ]))
+                , test "throws an exception if invoked with a string arg" <|
+                    \_ ->
+                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (StringVal "0"), Lit (StringVal "1") ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0", StringVal "1" ]))
+                , test "throws an exception if invoked with an array arg" <|
+                    \_ ->
+                        let
+                            arr1 =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
+
+                            arr2 =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 2 ) ]
+                        in
+                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit arr1, Lit arr2 ]) ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ arr1, arr2 ]))
+                ]
+            , describe "要素数" <|
+                [ test "calculates the number of elements of an empty array" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <| Dict.fromList []
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "0" ])
+                , test "calculates the number of elements of a singleton array" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "1" ])
+                , test "calculates the number of elements of a multi-element array" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ), ( 1, NumberVal 1 ), ( 2, NumberVal 2 ) ]
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "3" ])
+                , test "calculates the number of top-level elements of a 2-dim array" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        , ( 2, ArrayVal <| Dict.fromList [ ( 0, NumberVal 500 ), ( 1, NumberVal 600 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "3" ])
+                , test "calculates the number of both defined and undefined elements" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 100, NumberVal 1 ), ( 200, NumberVal 2 ), ( 300, NumberVal 3 ) ]
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Ok [ "301" ])
+                , test "throws an exception when invoked with no args" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") []) ]
+                            |> Expect.equal (Result.Err (InvalidArgument []))
+                , test "throws an exception when invoked with 2 args" <|
+                    \_ ->
+                        let
+                            arr1 =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
+
+                            arr2 =
+                                ArrayVal <| Dict.fromList [ ( 0, NumberVal 1 ) ]
+                        in
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr1, Lit arr2 ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ arr1, arr2 ]))
+                , test "throws an exception when invoked with a number arg" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit (NumberVal 0) ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0 ]))
+                , test "throws an exception when invoked with a string arg" <|
+                    \_ ->
+                        run
+                            [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit (StringVal "0") ])
+                            , PrintLn (singleton (PrintVar (Scalar "res")))
+                            ]
+                            |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0" ]))
                 ]
             ]
         ]

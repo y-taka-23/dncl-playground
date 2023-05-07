@@ -15,13 +15,32 @@ import Result.Extra as Result
 
 type alias Evaluator =
     { continuation : DNCLProgram
-    , variables : Variables
+    , symbolTable : SymbolTable
     , output : Buffer
+    }
+
+
+type alias SymbolTable =
+    { variables : Variables
+    , functions : Functions
     }
 
 
 type alias Variables =
     Dict Name Value
+
+
+updateVars : SymbolTable -> Variables -> SymbolTable
+updateVars st vs =
+    { st | variables = vs }
+
+
+type alias Functions =
+    Dict Name FunctionDef
+
+
+type alias FunctionDef =
+    List Value -> Result Exception Value
 
 
 type alias Buffer =
@@ -46,18 +65,23 @@ type StepResult
 
 type Exception
     = UndefinedVariable Variable
+    | UndefinedFunction Function
     | ConstReassignment Variable
     | InvalidArrayAssignment Variable
     | NonNumericArrayIndex Value
     | IndexOutOfBound Variable
     | ZeroDivision
     | UnsupportedOperation
+    | InvalidArgument (List Value)
 
 
 load : DNCLProgram -> Evaluator
 load prog =
     { continuation = prog
-    , variables = Dict.empty
+    , symbolTable =
+        { variables = Dict.empty
+        , functions = builtinFuns
+        }
     , output = { buffer = "", lines = [] }
     }
 
@@ -69,20 +93,24 @@ step ev =
             Ok <| Completed ev
 
         (Assign v aexp) :: stmts ->
-            case evalArith ev.variables aexp of
+            case evalArith ev.symbolTable aexp of
                 Err e ->
                     Err e
 
                 Ok n ->
-                    case assignVar v n ev.variables of
+                    case assignVar ev.symbolTable v n of
                         Err e ->
                             Err e
 
                         Ok vs ->
-                            Ok <| Continued { ev | continuation = stmts, variables = vs }
+                            let
+                                st =
+                                    updateVars ev.symbolTable vs
+                            in
+                            Ok <| Continued { ev | continuation = stmts, symbolTable = st }
 
         (PrintLn ps) :: stmts ->
-            case format ev.variables ps of
+            case format ev.symbolTable ps of
                 Err e ->
                     Err e
 
@@ -94,7 +122,7 @@ step ev =
                     Ok <| Continued { ev | continuation = stmts, output = out }
 
         (Print ps) :: stmts ->
-            case format ev.variables ps of
+            case format ev.symbolTable ps of
                 Err e ->
                     Err e
 
@@ -128,7 +156,7 @@ step ev =
 
         -- TODO: List concatination looks show
         (If bexp thenStmts) :: stmts ->
-            case evalBool ev.variables bexp of
+            case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
@@ -139,7 +167,7 @@ step ev =
                     Ok <| Continued { ev | continuation = stmts }
 
         (IfElse bexp thenStmts elseStmts) :: stmts ->
-            case evalBool ev.variables bexp of
+            case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
@@ -150,7 +178,7 @@ step ev =
                     Ok <| Continued { ev | continuation = elseStmts ++ stmts }
 
         (PreCheckLoop bexp loopStmts) :: stmts ->
-            case evalBool ev.variables bexp of
+            case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
@@ -164,7 +192,7 @@ step ev =
             Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
 
         (IncrementLoop v from to diff loopStmts) :: stmts ->
-            case evalArith ev.variables from of
+            case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
 
@@ -176,15 +204,19 @@ step ev =
                         loop =
                             PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
                     in
-                    case assignVar v n ev.variables of
+                    case assignVar ev.symbolTable v n of
                         Err e ->
                             Err e
 
                         Ok vs ->
-                            Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+                            let
+                                st =
+                                    updateVars ev.symbolTable vs
+                            in
+                            Ok <| Continued { ev | continuation = loop :: stmts, symbolTable = st }
 
         (DecrementLoop v from to diff loopStmts) :: stmts ->
-            case evalArith ev.variables from of
+            case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
 
@@ -196,25 +228,29 @@ step ev =
                         loop =
                             PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
                     in
-                    case assignVar v n ev.variables of
+                    case assignVar ev.symbolTable v n of
                         Err e ->
                             Err e
 
                         Ok vs ->
-                            Ok <| Continued { ev | continuation = loop :: stmts, variables = vs }
+                            let
+                                st =
+                                    updateVars ev.symbolTable vs
+                            in
+                            Ok <| Continued { ev | continuation = loop :: stmts, symbolTable = st }
 
 
-lookupVar : Variable -> Variables -> Result Exception Value
-lookupVar v vs =
+lookupVar : SymbolTable -> Variable -> Result Exception Value
+lookupVar st v =
     case v of
         Scalar x ->
-            Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
+            Result.fromMaybe (UndefinedVariable v) <| Dict.get x st.variables
 
         Const x ->
-            Result.fromMaybe (UndefinedVariable v) <| Dict.get x vs
+            Result.fromMaybe (UndefinedVariable v) <| Dict.get x st.variables
 
         Array x aexps ->
-            case ( evalIndices vs aexps, Dict.get x vs ) of
+            case ( evalIndices st aexps, Dict.get x st.variables ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -243,22 +279,22 @@ lookupArray val idxs =
             Nothing
 
 
-assignVar : Variable -> Value -> Variables -> Result Exception Variables
-assignVar v val vs =
+assignVar : SymbolTable -> Variable -> Value -> Result Exception Variables
+assignVar st v val =
     case ( v, val ) of
         ( Scalar x, ArrayVal _ ) ->
             Err <| InvalidArrayAssignment v
 
         ( Scalar x, _ ) ->
-            Ok <| Dict.insert x val vs
+            Ok <| Dict.insert x val st.variables
 
         ( Const x, ArrayVal _ ) ->
             Err <| InvalidArrayAssignment v
 
         ( Const x, _ ) ->
-            case lookupVar v vs of
+            case lookupVar st v of
                 Err (UndefinedVariable _) ->
-                    Ok <| Dict.insert x val vs
+                    Ok <| Dict.insert x val st.variables
 
                 Err e ->
                     Err e
@@ -267,13 +303,13 @@ assignVar v val vs =
                     Err <| ConstReassignment (Const x)
 
         ( Array x [], ArrayVal _ ) ->
-            Ok <| Dict.insert x val vs
+            Ok <| Dict.insert x val st.variables
 
         ( Array _ [], _ ) ->
             Err <| InvalidArrayAssignment v
 
         ( Array x aexps, _ ) ->
-            case ( evalIndices vs aexps, lookupVar (Array x []) vs ) of
+            case ( evalIndices st aexps, lookupVar st (Array x []) ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -286,7 +322,7 @@ assignVar v val vs =
                             Err <| IndexOutOfBound v
 
                         Just newRoot ->
-                            Ok <| Dict.insert x newRoot vs
+                            Ok <| Dict.insert x newRoot st.variables
 
 
 assignArray : Value -> List Index -> Value -> Maybe Value
@@ -312,9 +348,9 @@ assignArray root idxs newElem =
             Nothing
 
 
-evalIndices : Variables -> List ArithExp -> Result Exception (List Index)
-evalIndices vs aexps =
-    case Result.combineMap (evalArith vs) aexps of
+evalIndices : SymbolTable -> List ArithExp -> Result Exception (List Index)
+evalIndices st aexps =
+    case Result.combineMap (evalArith st) aexps of
         Err e ->
             Err e
 
@@ -331,26 +367,26 @@ evalIndices vs aexps =
             Result.mapError NonNumericArrayIndex <| Result.combineMap toIndex vals
 
 
-evalArith : Variables -> ArithExp -> Result Exception Value
-evalArith vs aexp =
+evalArith : SymbolTable -> ArithExp -> Result Exception Value
+evalArith st aexp =
     case aexp of
         Lit val ->
             Ok val
 
         Var v ->
-            lookupVar v vs
+            lookupVar st v
 
         Plus e1 e2 ->
-            Result.map NumberVal <| opNums (+) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (+) (evalArith st e1) (evalArith st e2)
 
         Minus e1 e2 ->
-            Result.map NumberVal <| opNums (-) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (-) (evalArith st e1) (evalArith st e2)
 
         Times e1 e2 ->
-            Result.map NumberVal <| opNums (*) (evalArith vs e1) (evalArith vs e2)
+            Result.map NumberVal <| opNums (*) (evalArith st e1) (evalArith st e2)
 
         Quot e1 e2 ->
-            case ( evalArith vs e1, evalArith vs e2 ) of
+            case ( evalArith st e1, evalArith st e2 ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -367,7 +403,7 @@ evalArith vs aexp =
                     Err UnsupportedOperation
 
         Mod e1 e2 ->
-            case ( evalArith vs e1, evalArith vs e2 ) of
+            case ( evalArith st e1, evalArith st e2 ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -384,19 +420,30 @@ evalArith vs aexp =
                     Err UnsupportedOperation
 
         Arr es ->
-            case Result.combineMap (evalArith vs) es of
+            case Result.combineMap (evalArith st) es of
                 Err e ->
                     Err e
 
                 Ok vals ->
                     Ok <| ArrayVal <| Dict.fromList <| List.indexedMap Tuple.pair vals
 
+        Fun (Function f) es ->
+            case ( Result.combineMap (evalArith st) es, Dict.get f st.functions ) of
+                ( Err e, _ ) ->
+                    Err e
 
-evalBool : Variables -> BoolExp -> Result Exception Bool
-evalBool vs bexp =
+                ( _, Nothing ) ->
+                    Err <| UndefinedFunction <| Function f
+
+                ( Ok vals, Just fdef ) ->
+                    fdef vals
+
+
+evalBool : SymbolTable -> BoolExp -> Result Exception Bool
+evalBool st bexp =
     case bexp of
         Eq e1 e2 ->
-            case ( evalArith vs e1, evalArith vs e2 ) of
+            case ( evalArith st e1, evalArith st e2 ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -413,7 +460,7 @@ evalBool vs bexp =
                     Err UnsupportedOperation
 
         Neq e1 e2 ->
-            case ( evalArith vs e1, evalArith vs e2 ) of
+            case ( evalArith st e1, evalArith st e2 ) of
                 ( Err e, _ ) ->
                     Err e
 
@@ -430,25 +477,25 @@ evalBool vs bexp =
                     Err UnsupportedOperation
 
         Gt e1 e2 ->
-            opNums (>) (evalArith vs e1) (evalArith vs e2)
+            opNums (>) (evalArith st e1) (evalArith st e2)
 
         Ge e1 e2 ->
-            opNums (>=) (evalArith vs e1) (evalArith vs e2)
+            opNums (>=) (evalArith st e1) (evalArith st e2)
 
         Le e1 e2 ->
-            opNums (<=) (evalArith vs e1) (evalArith vs e2)
+            opNums (<=) (evalArith st e1) (evalArith st e2)
 
         Lt e1 e2 ->
-            opNums (<) (evalArith vs e1) (evalArith vs e2)
+            opNums (<) (evalArith st e1) (evalArith st e2)
 
         And e1 e2 ->
-            Result.map2 (&&) (evalBool vs e1) (evalBool vs e2)
+            Result.map2 (&&) (evalBool st e1) (evalBool st e2)
 
         Or e1 e2 ->
-            Result.map2 (||) (evalBool vs e1) (evalBool vs e2)
+            Result.map2 (||) (evalBool st e1) (evalBool st e2)
 
         Not e ->
-            Result.map not (evalBool vs e)
+            Result.map not (evalBool st e)
 
 
 opNums : (Int -> Int -> a) -> Result Exception Value -> Result Exception Value -> Result Exception a
@@ -468,29 +515,24 @@ opNums op r1 r2 =
             Err UnsupportedOperation
 
 
-format : Variables -> Nonempty Printable -> Result Exception String
-format vs ps =
+format : SymbolTable -> Nonempty Printable -> Result Exception String
+format st ps =
     let
         concat r1 r2 =
             -- List.Nonempty.foldl1 accumulates items in the reverse order
             Result.map2 (\x y -> y ++ x) r1 r2
     in
-    Nonempty.foldl1 concat <| Nonempty.map (formatItem vs) ps
+    Nonempty.foldl1 concat <| Nonempty.map (formatItem st) ps
 
 
-formatItem : Variables -> Printable -> Result Exception String
-formatItem vs p =
+formatItem : SymbolTable -> Printable -> Result Exception String
+formatItem st p =
     case p of
         PrintVal val ->
             Ok <| formatValue val
 
         PrintVar v ->
-            case lookupVar v vs of
-                Err e ->
-                    Err e
-
-                Ok val ->
-                    Ok <| formatValue val
+            Result.map formatValue <| lookupVar st v
 
 
 formatValue : Value -> String
@@ -531,3 +573,47 @@ formatArray mval =
                     List.map formatArray filled
             in
             "{" ++ String.join "， " formatted ++ "}"
+
+
+builtinFuns : Functions
+builtinFuns =
+    Dict.fromList
+        [ ( "二乗", square )
+        , ( "べき乗", power )
+        , ( "要素数", countElems )
+        ]
+
+
+square : FunctionDef
+square vals =
+    case vals of
+        (NumberVal n) :: [] ->
+            Ok <| NumberVal (n * n)
+
+        _ ->
+            Err <| InvalidArgument vals
+
+
+power : FunctionDef
+power vals =
+    case vals of
+        (NumberVal n) :: (NumberVal m) :: [] ->
+            Ok <| NumberVal (n ^ m)
+
+        _ ->
+            Err <| InvalidArgument vals
+
+
+countElems : FunctionDef
+countElems vals =
+    case vals of
+        (ArrayVal elems) :: [] ->
+            -- TODO: How to count undefined elements?
+            let
+                maxIndex =
+                    Maybe.withDefault -1 <| List.maximum <| Dict.keys elems
+            in
+            Ok <| NumberVal <| maxIndex + 1
+
+        _ ->
+            Err <| InvalidArgument vals

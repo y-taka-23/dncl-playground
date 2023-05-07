@@ -13,7 +13,6 @@ import DNCL.Evaluator
         )
 import DNCL.Example exposing (..)
 import DNCL.Parser exposing (parse)
-import Debug
 import Element
     exposing
         ( Attribute

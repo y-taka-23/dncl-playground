@@ -71,7 +71,7 @@ constOrArray =
             , reserved = Set.empty
             }
         |= oneOf
-            [ squareBrackets (lazy (\_ -> arithExpSeq))
+            [ squareBrackets (lazy (\_ -> arithExpMany1))
             , succeed []
             ]
 
@@ -83,12 +83,6 @@ toConstOrArray x aexps =
 
     else
         Array x aexps
-
-
-arithExpSeq : Parser (List ArithExp)
-arithExpSeq =
-    arithExp
-        |> andThen (\e -> loop [ e ] arithExpLoop)
 
 
 value : Parser Value
@@ -149,6 +143,16 @@ stringValEn =
         |. symbol "\""
 
 
+function : Parser Function
+function =
+    succeed Function
+        |= variable
+            { start = \c -> Char.toCode c > 0x70
+            , inner = \c -> Char.toCode c > 0x70
+            , reserved = Set.empty
+            }
+
+
 blanks : Parser ()
 blanks =
     chompWhile (\c -> c == ' ')
@@ -183,6 +187,20 @@ arithExp : Parser ArithExp
 arithExp =
     arithTerm
         |> andThen (\e -> loop e arithTermLoop)
+
+
+arithExpMany1 : Parser (List ArithExp)
+arithExpMany1 =
+    arithExp
+        |> andThen (\e -> loop [ e ] arithExpLoop)
+
+
+arithExpMany : Parser (List ArithExp)
+arithExpMany =
+    oneOf
+        [ arithExpMany1
+        , succeed []
+        ]
 
 
 arithExpLoop : List ArithExp -> Parser (Step (List ArithExp) (List ArithExp))
@@ -251,6 +269,7 @@ arithFactor =
         [ arithLit
         , arithVar
         , arithArr
+        , arithFun
         , roundBrackets (lazy (\_ -> arithExp))
         ]
 
@@ -271,15 +290,15 @@ arithArr : Parser ArithExp
 arithArr =
     succeed Arr
         -- TODO: Commas should be not '，' but ', '?
-        |= curlyBrackets (lazy (\_ -> arithArrElems))
+        |= curlyBrackets (lazy (\_ -> arithExpMany))
 
 
-arithArrElems : Parser (List ArithExp)
-arithArrElems =
-    oneOf
-        [ arithExpSeq
-        , succeed []
-        ]
+arithFun : Parser ArithExp
+arithFun =
+    succeed Fun
+        |= backtrackable function
+        |. blanks
+        |= roundBrackets (lazy (\_ -> arithExpMany))
 
 
 boolExp : Parser BoolExp
