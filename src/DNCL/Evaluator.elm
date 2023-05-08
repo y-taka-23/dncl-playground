@@ -69,10 +69,11 @@ type Exception
     | ConstReassignment Variable
     | InvalidArrayAssignment Variable
     | NonNumericArrayIndex Value
-    | IndexOutOfBound Variable
+    | NegativeArrayIndex Variable
     | ZeroDivision
     | UnsupportedOperation
     | InvalidArgument (List Value)
+    | UnreachableBranch String
 
 
 load : DNCLProgram -> Evaluator
@@ -258,25 +259,29 @@ lookupVar st v =
                     Err <| UndefinedVariable v
 
                 ( Ok idxs, Just arr ) ->
-                    Result.fromMaybe (IndexOutOfBound v) <| lookupArray arr idxs
+                    lookupArray v arr idxs
 
 
-lookupArray : Value -> List Index -> Maybe Value
-lookupArray val idxs =
+lookupArray : Variable -> Value -> List Index -> Result Exception Value
+lookupArray v val idxs =
     case ( val, idxs ) of
         ( _, [] ) ->
-            Just val
+            Ok val
 
         ( ArrayVal elems, i :: is ) ->
-            case Dict.get i elems of
-                Nothing ->
-                    Nothing
+            if i < 0 then
+                Err <| NegativeArrayIndex v
 
-                Just elem ->
-                    lookupArray elem is
+            else
+                case Dict.get i elems of
+                    Nothing ->
+                        Err <| UndefinedVariable v
+
+                    Just elem ->
+                        lookupArray v elem is
 
         ( _, _ :: _ ) ->
-            Nothing
+            Err <| UnreachableBranch "lookupArray"
 
 
 assignVar : SymbolTable -> Variable -> Value -> Result Exception Variables
@@ -313,39 +318,50 @@ assignVar st v val =
                 ( Err e, _ ) ->
                     Err e
 
-                ( _, Err e ) ->
+                ( Ok idxs, Err (UndefinedVariable _) ) ->
+                    case assignArray v (ArrayVal Dict.empty) idxs val of
+                        Err e ->
+                            Err e
+
+                        Ok newRoot ->
+                            Ok <| Dict.insert x newRoot st.variables
+
+                ( Ok _, Err e ) ->
                     Err e
 
                 ( Ok idxs, Ok root ) ->
-                    case assignArray root idxs val of
-                        Nothing ->
-                            Err <| IndexOutOfBound v
+                    case assignArray v root idxs val of
+                        Err e ->
+                            Err e
 
-                        Just newRoot ->
+                        Ok newRoot ->
                             Ok <| Dict.insert x newRoot st.variables
 
 
-assignArray : Value -> List Index -> Value -> Maybe Value
-assignArray root idxs newElem =
+assignArray : Variable -> Value -> List Index -> Value -> Result Exception Value
+assignArray v root idxs newElem =
     case ( root, idxs ) of
         ( _, [] ) ->
-            Just newElem
+            Ok newElem
 
         ( ArrayVal elems, i :: is ) ->
-            case Dict.get i elems of
-                Nothing ->
-                    Nothing
+            if i < 0 then
+                Err <| NegativeArrayIndex v
 
-                Just elem ->
-                    case assignArray elem is newElem of
-                        Nothing ->
-                            Nothing
+            else
+                let
+                    child =
+                        Maybe.withDefault (ArrayVal Dict.empty) <| Dict.get i elems
+                in
+                case assignArray v child is newElem of
+                    Err e ->
+                        Err e
 
-                        Just newRoot ->
-                            Just <| ArrayVal <| Dict.insert i newRoot elems
+                    Ok newRoot ->
+                        Ok <| ArrayVal <| Dict.insert i newRoot elems
 
         ( _, _ :: _ ) ->
-            Nothing
+            Err <| UnreachableBranch "assignArray"
 
 
 evalIndices : SymbolTable -> List ArithExp -> Result Exception (List Index)
@@ -547,8 +563,7 @@ formatArray : Maybe Value -> String
 formatArray mval =
     case mval of
         Nothing ->
-            -- As far as parsed from source code, an array has 0..size-1 indices
-            "unreachable"
+            "undefined"
 
         Just (NumberVal n) ->
             String.fromInt n
@@ -603,12 +618,7 @@ countElems : FunctionDef
 countElems vals =
     case vals of
         (ArrayVal elems) :: [] ->
-            -- TODO: How to count undefined elements?
-            let
-                maxIndex =
-                    Maybe.withDefault -1 <| List.maximum <| Dict.keys elems
-            in
-            Ok <| NumberVal <| maxIndex + 1
+            Ok <| NumberVal <| Dict.size elems
 
         _ ->
             Err <| InvalidArgument vals

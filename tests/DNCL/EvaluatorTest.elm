@@ -81,7 +81,7 @@ suite =
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
                             |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
-                , test "assigns an element to an array variable" <|
+                , test "assigns an element to an defined array variable" <|
                     \_ ->
                         let
                             arr =
@@ -94,6 +94,13 @@ suite =
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
                             |> Expect.equal (Result.Ok [ "{100， 999， 300}" ])
+                , test "assigns an element to an undefined array variable" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" [ Lit (NumberVal 1) ]) (Lit (NumberVal 999))
+                            , PrintLn (singleton (Var (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{undefined， 999}" ])
                 , test "assigns an array to an array variable" <|
                     \_ ->
                         let
@@ -124,6 +131,13 @@ suite =
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
                             |> Expect.equal (Result.Ok [ "{{100， 999}， {300， 400}}" ])
+                , test "assigns an element to a 2-dim undefined array variable" <|
+                    \_ ->
+                        run
+                            [ Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
+                            , PrintLn (singleton (Var (Array "MyArr" [])))
+                            ]
+                            |> Expect.equal (Result.Ok [ "{{undefined， 999}}" ])
                 , test "assigns an element of a 1-dim array to a scalar" <|
                     \_ ->
                         let
@@ -196,8 +210,26 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal -1) ]))
                             ]
-                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal -1) ])))
-                , test "throws an exception when the index of the array exceeds the bound" <|
+                            |> Expect.equal (Result.Err (NegativeArrayIndex (Array "MyArr" [ Lit (NumberVal -1) ])))
+                , test "throws an exception when the 2nd index of the array variable is negative" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]))
+                            ]
+                            |> Expect.equal
+                                (Result.Err
+                                    (NegativeArrayIndex (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]))
+                                )
+                , test "throws an exception when the index of the array is undefined" <|
                     \_ ->
                         let
                             arr =
@@ -208,7 +240,19 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 3) ]))
                             ]
-                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 3) ])))
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 3) ])))
+                , test "throws an exception when the index of the array exceeding the max" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 3) ]))
+                            ]
+                            |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 3) ])))
                 , test "assigns a 1-dim array of expressions" <|
                     \_ ->
                         run
@@ -270,8 +314,26 @@ suite =
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal -1) ]) (Lit (NumberVal 999))
                             ]
-                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal -1) ])))
-                , test "throws an exception when the index exceeds the bound" <|
+                            |> Expect.equal (Result.Err (NegativeArrayIndex (Array "MyArr" [ Lit (NumberVal -1) ])))
+                , test "throws an exception when the 2nd index is negative" <|
+                    \_ ->
+                        let
+                            arr =
+                                ArrayVal <|
+                                    Dict.fromList
+                                        [ ( 0, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
+                                        , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
+                                        ]
+                        in
+                        run
+                            [ Assign (Array "MyArr" []) (Lit arr)
+                            , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]) (Lit (NumberVal 999))
+                            ]
+                            |> Expect.equal
+                                (Result.Err
+                                    (NegativeArrayIndex (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]))
+                                )
+                , test "assigns the value even if the index exceeds the bound" <|
                     \_ ->
                         let
                             arr =
@@ -281,9 +343,10 @@ suite =
                         run
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 3) ]) (Lit (NumberVal 999))
+                            , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
-                            |> Expect.equal (Result.Err (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 3) ])))
-                , test "throws an exception when the index is missing" <|
+                            |> Expect.equal (Result.Ok [ "{100， 200， 300， 999}" ])
+                , test "assigns an exception even if the index is missing" <|
                     \_ ->
                         let
                             arr =
@@ -296,11 +359,9 @@ suite =
                         run
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
+                            , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
-                            |> Expect.equal
-                                (Result.Err
-                                    (IndexOutOfBound (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
-                                )
+                            |> Expect.equal (Result.Ok [ "{{100， 999}， {300， 400}}" ])
                 , test "throws an exception when it comes to an undefined function" <|
                     \_ ->
                         run [ Assign (Scalar "x") (Fun (Function "未定義") [ Lit (NumberVal 0) ]) ]
@@ -702,7 +763,7 @@ suite =
                                     Dict.fromList [ ( 1, NumberVal 100 ), ( 3, NumberVal 200 ) ]
                         in
                         run [ PrintLn (singleton (Lit arr)) ]
-                            |> Expect.equal (Result.Ok [ "{unreachable， 100， unreachable， 200}" ])
+                            |> Expect.equal (Result.Ok [ "{undefined， 100， undefined， 200}" ])
                 , test "outputs a variable" <|
                     \_ ->
                         run
@@ -1609,7 +1670,7 @@ suite =
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Ok [ "3" ])
-                , test "calculates the number of both defined and undefined elements" <|
+                , test "calculates the number of defined elements only" <|
                     \_ ->
                         let
                             arr =
@@ -1620,7 +1681,7 @@ suite =
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
-                            |> Expect.equal (Result.Ok [ "301" ])
+                            |> Expect.equal (Result.Ok [ "3" ])
                 , test "throws an exception when invoked with no args" <|
                     \_ ->
                         run
