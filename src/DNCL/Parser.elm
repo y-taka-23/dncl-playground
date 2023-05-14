@@ -2,6 +2,7 @@ module DNCL.Parser exposing
     ( arithExp
     , boolExp
     , dnclProgram
+    , parameterMany
     , parse
     , statement
     , value
@@ -146,6 +147,12 @@ stringValEn =
 function : Parser Function
 function =
     succeed Function
+        |= functionName
+
+
+functionName : Parser Name
+functionName =
+    succeed identity
         |= variable
             { start = \c -> Char.toCode c > 0x7F
             , inner = \c -> Char.toCode c > 0x7F
@@ -620,10 +627,67 @@ decrementLoop =
         |. line (symbol "を繰り返す")
 
 
+parameter : Parser Parameter
+parameter =
+    succeed Param
+        |= variable
+            { start = Char.isAlpha
+            , inner = \c -> Char.isAlphaNum c || (c == '_')
+            , reserved = Set.empty
+            }
+
+
+parameterMany1 : Parser (List Parameter)
+parameterMany1 =
+    parameter
+        |> andThen (\p -> loop [ p ] parameterLoop)
+
+
+parameterMany : Parser (List Parameter)
+parameterMany =
+    oneOf
+        [ parameterMany1
+        , succeed []
+        ]
+
+
+parameterLoop : List Parameter -> Parser (Step (List Parameter) (List Parameter))
+parameterLoop acc =
+    oneOf
+        [ succeed (\e -> Loop (e :: acc))
+            |. backtrackable blanks
+            |. symbol "，"
+            |. blanks
+            |= parameter
+        , succeed ()
+            |> map (\_ -> Done <| List.reverse acc)
+        ]
+
+
+functionDecl : Parser FunctionDecl
+functionDecl =
+    succeed (\( n, ps ) proc -> Decl n ps proc)
+        |= line
+            (succeed Tuple.pair
+                |. symbol "関数"
+                |. symbol " "
+                |. blanks
+                |= functionName
+                |. blanks
+                |= roundBrackets parameterMany
+                |. blanks
+                |. symbol "を"
+            )
+        |= procedure
+        |. line (symbol "と定義する")
+
+
 snippet =
     oneOf
         [ succeed Stmt
             |= statement
+        , succeed FunDecl
+            |= functionDecl
         ]
 
 

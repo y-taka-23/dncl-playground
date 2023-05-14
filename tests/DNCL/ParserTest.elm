@@ -2025,117 +2025,422 @@ suite =
                 ]
             ]
         , describe "dnclProgram"
-            [ test "parses the empty procedure" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """"""
-                        |> Expect.equal (Result.Ok [])
-            , test "parses the empty procedure with blank lines" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """
+            [ describe "statements"
+                [ test "parses the empty procedure" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """"""
+                            |> Expect.equal (Result.Ok [])
+                , test "parses the empty procedure with blank lines" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """
 
-                        """
-                        |> Expect.equal (Result.Ok [])
-            , test "parses a single statement without blank lines" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ 「こんにちは、世界」を表示する"""
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
-                            )
-            , test "parses a single statment with proceding line break" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """
+                            """
+                            |> Expect.equal (Result.Ok [])
+                , test "parses a single statement without blank lines" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 「こんにちは、世界」を表示する"""
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                                )
+                , test "parses a single statment with proceding line break" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """
                             「こんにちは、世界」を表示する"""
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
-                            )
-            , test "parses a single statement with succeeding line break" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ 「こんにちは、世界」を表示する
-                        """
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
-                            )
-            , test "parses multiple line-statements" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ x ← 42
-                            x を表示する
-                        """
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 42))
-                                , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
-                                ]
-                            )
-            , test "parses multiple block-statements" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ もし x ＜ 3 ならば
-                                x ← 3
-                            を実行する
-                            もし y ＜ 3 ならば
-                                y ← 3
-                            を実行する
-                        """
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <|
-                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                , Stmt <|
-                                    If (Lt (Var (Scalar "y")) (Lit (NumberVal 3)))
-                                        [ Assign (Scalar "y") (Lit (NumberVal 3)) ]
-                                ]
-                            )
-            , test "parses a line-statements and a block-statement" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ x ← 0
-                            もし x ＜ 3 ならば
-                                x ← 3
-                            を実行する
-                        """
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 0))
-                                , Stmt <|
-                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                ]
-                            )
-            , test "parses a block-statement and a line-statements" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ もし x ＜ 3 ならば
-                                x ← 3
-                            を実行する
-                            x を表示する
-                        """
-                        |> Expect.equal
-                            (Result.Ok
-                                [ Stmt <|
-                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
-                                ]
-                            )
-            , test "cannot parse a program with a trailing erroneous fragment" <|
-                \_ ->
-                    Parser.run dnclProgram
-                        """ もし x ＜ 3 ならば
-                                x ← 3
-                            を実行する
-                            x を表示する
-                            err
-                        """
-                        |> Expect.err
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                                )
+                , test "parses a single statement with succeeding line break" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 「こんにちは、世界」を表示する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                                )
+                , test "parses multiple line-statements" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ x ← 42
+                                x を表示する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 42))
+                                    , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
+                                    ]
+                                )
+                , test "parses multiple block-statements" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ もし x ＜ 3 ならば
+                                    x ← 3
+                                を実行する
+                                もし y ＜ 3 ならば
+                                    y ← 3
+                                を実行する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <|
+                                        If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                            [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                    , Stmt <|
+                                        If (Lt (Var (Scalar "y")) (Lit (NumberVal 3)))
+                                            [ Assign (Scalar "y") (Lit (NumberVal 3)) ]
+                                    ]
+                                )
+                , test "parses a line-statements and a block-statement" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ x ← 0
+                                もし x ＜ 3 ならば
+                                    x ← 3
+                                を実行する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 0))
+                                    , Stmt <|
+                                        If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                            [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                    ]
+                                )
+                , test "parses a block-statement and a line-statements" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ もし x ＜ 3 ならば
+                                    x ← 3
+                                を実行する
+                                x を表示する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <|
+                                        If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                            [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                    , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
+                                    ]
+                                )
+                , test "cannot parse a program with a trailing erroneous fragment" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ もし x ＜ 3 ならば
+                                    x ← 3
+                                を実行する
+                                x を表示する
+                                err
+                            """
+                            |> Expect.err
+                ]
+            , describe "function declarations"
+                [ test "parses a function with no params" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する () を
+                                と定義する
+                            """
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                , test "parses a function with no params without space" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する()を
+                                と定義する
+                            """
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                , test "parses a function with no params with spaces" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (  ) を
+                                と定義する
+                            """
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                , test "parses a function with a single param" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+                                と定義する
+                            """
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ])
+                , test "parses a function with a single param with spaces" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する ( n ) を
+                                と定義する
+                            """
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ])
+                , test "parses a function with multiple params" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n，m，l) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "n", Param "m", Param "l" ] [] ]
+                                )
+                , test "parses a function with multiple params with spaces" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する ( n， m， l ) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "n", Param "m", Param "l" ] [] ]
+                                )
+                , test "cannot parse a function of the ascii name" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 getSum (n，m，l) を
+                                と定義する
+                            """
+                            |> Expect.err
+                , test "cannot parse a function of non-separated name" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数和を表示する (n，m，l) を
+                                と定義する
+                            """
+                            |> Expect.err
+                , test "parses a function of a param including upper cases" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (myParam) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "myParam" ] [] ]
+                                )
+                , test "parses a function of a param including numbers" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (x01) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "x01" ] [] ]
+                                )
+                , test "parses a function of a param including underscores" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (x_sum) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "x_sum" ] [] ]
+                                )
+                , test "parses a function of a param staring with an upper case" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (Param) を
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "Param" ] [] ]
+                                )
+                , test "cannot parse a function of a param staring with a number" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (0x) を
+                                と定義する
+                            """
+                            |> Expect.err
+                , test "cannot parse a function of a param staring with an underscore" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (_x) を
+                                と定義する
+                            """
+                            |> Expect.err
+                , test "parses a function of a blank line" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ]
+                                )
+                , test "parses a function of a single statement" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+                                    wa ← 0
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
+                                    ]
+                                )
+                , test "parses a function of multiple statements" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+                                    wa ← 0
+                                    wa を表示する
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0))
+                                            , PrintLn (singleton (Var (Scalar "wa")))
+                                            ]
+                                    ]
+                                )
+                , test "parses functions with no blank line" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+                                    wa ← 0
+                                    wa を表示する
+                                と定義する
+                                関数 積を表示する (m) を
+                                    seki ← 0
+                                    seki を表示する
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0))
+                                            , PrintLn (singleton (Var (Scalar "wa")))
+                                            ]
+                                    , FunDecl <|
+                                        Decl "積を表示する"
+                                            [ Param "m" ]
+                                            [ Assign (Scalar "seki") (Lit (NumberVal 0))
+                                            , PrintLn (singleton (Var (Scalar "seki")))
+                                            ]
+                                    ]
+                                )
+                , test "parses functions with blank lines" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """
+                                関数 和を表示する (n) を
+                                    wa ← 0
+                                    wa を表示する
+                                と定義する
+
+                                関数 積を表示する (m) を
+                                    seki ← 0
+                                    seki を表示する
+                                と定義する
+
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0))
+                                            , PrintLn (singleton (Var (Scalar "wa")))
+                                            ]
+                                    , FunDecl <|
+                                        Decl "積を表示する"
+                                            [ Param "m" ]
+                                            [ Assign (Scalar "seki") (Lit (NumberVal 0))
+                                            , PrintLn (singleton (Var (Scalar "seki")))
+                                            ]
+                                    ]
+                                )
+                ]
+            , describe "mix of statements and declarations"
+                [ test "parses a function then a declaration with no space" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ kosu ← 0
+                                関数 和を表示する (n) を
+                                    wa ← 0
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
+                                    , FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
+                                    ]
+                                )
+                , test "parses a function then a declaration with spaces" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """
+                                kosu ← 0
+
+                                関数 和を表示する (n) を
+                                    wa ← 0
+                                と定義する
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
+                                    , FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
+                                    ]
+                                )
+                , test "parses a declaration then a statement with no space" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """ 関数 和を表示する (n) を
+                                    wa ← 0
+                                と定義する
+                                kosu ← 0
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
+                                    , Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
+                                    ]
+                                )
+                , test "parses a declaration then a statement with spaces" <|
+                    \_ ->
+                        Parser.run dnclProgram
+                            """
+                                関数 和を表示する (n) を
+                                    wa ← 0
+                                と定義する
+
+                                kosu ← 0
+
+                            """
+                            |> Expect.equal
+                                (Result.Ok
+                                    [ FunDecl <|
+                                        Decl "和を表示する"
+                                            [ Param "n" ]
+                                            [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
+                                    , Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
+                                    ]
+                                )
+                ]
             ]
         ]
