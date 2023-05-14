@@ -14,9 +14,9 @@ nonzero =
     filter (\n -> n /= 0) int
 
 
-run : DNCLProgram -> Result Exception (List String)
-run prog =
-    load prog |> eval
+runStatements : List Statement -> Result Exception (List String)
+runStatements =
+    eval << load << List.map Stmt
 
 
 eval : Evaluator -> Result Exception (List String)
@@ -38,33 +38,33 @@ suite =
         [ describe "step"
             [ test "outputs nothing for the empty program" <|
                 \_ ->
-                    run []
+                    runStatements []
                         |> Expect.equal (Result.Ok [])
             , describe "assign"
                 [ test "assigns a numeric value to a variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 42))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ "42" ])
                 , test "assigns a numeric value to a constant if it is undefined" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 42))
                             , PrintLn (singleton (Var (Const "X")))
                             ]
                             |> Expect.equal (Result.Ok [ "42" ])
                 , test "cannot assign a numeric value to a constant if it is already defined" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 42))
                             , Assign (Const "X") (Lit (NumberVal 42))
                             ]
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , test "assigns a string value to a variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (StringVal "Hello"))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
@@ -76,7 +76,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
@@ -88,7 +88,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
@@ -96,7 +96,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "{100， 999， 300}" ])
                 , test "assigns an element to an undefined array variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [ Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
@@ -108,7 +108,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 1) ])
                                 (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 888 ), ( 1, NumberVal 999 ) ]))
@@ -125,7 +125,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
@@ -133,7 +133,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "{{100， 999}， {300， 400}}" ])
                 , test "assigns an element to a 2-dim undefined array variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
                             ]
@@ -145,7 +145,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 1) ]))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -161,7 +161,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -174,7 +174,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (StringVal "1") ]) (Lit (NumberVal 999))
                             ]
@@ -189,14 +189,14 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (StringVal "1") ]) (Lit (NumberVal 999))
                             ]
                             |> Expect.equal (Result.Err (NonNumericArrayIndex (StringVal "1")))
                 , test "throws an exception when the indix is a non-numeric rather than the array is missing" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [ Lit (StringVal "1") ]) (Lit (NumberVal 999)) ]
                             |> Expect.equal (Result.Err (NonNumericArrayIndex (StringVal "1")))
                 , test "throws an exception when the index of the array variable is negative" <|
@@ -206,7 +206,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal -1) ]))
                             ]
@@ -221,7 +221,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]))
                             ]
@@ -236,7 +236,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 3) ]))
                             ]
@@ -248,14 +248,14 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Scalar "x") (Var (Array "MyArr" [ Lit (NumberVal 3) ]))
                             ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Array "MyArr" [ Lit (NumberVal 3) ])))
                 , test "assigns a 1-dim array of expressions" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Arr [ Lit (NumberVal 100), Lit (NumberVal 200), Lit (NumberVal 300) ])
                             , PrintLn (singleton (Var (Array "MyArr" [])))
@@ -263,7 +263,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
                 , test "assigns a 2-dim array of expressions" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Arr
                                     [ Arr [ Lit (NumberVal 100), Lit (NumberVal 200) ]
@@ -280,7 +280,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit arr) ]
                             |> Expect.equal (Result.Err (InvalidArrayAssignment (Scalar "x")))
                 , test "throws an exception when an array is assigned to a constant" <|
@@ -290,17 +290,17 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit arr) ]
                             |> Expect.equal (Result.Err (InvalidArrayAssignment (Const "X")))
                 , test "throws an exception when a number is assigned to an array variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit (NumberVal 0)) ]
                             |> Expect.equal (Result.Err (InvalidArrayAssignment (Array "MyArr" [])))
                 , test "throws an exception when a string is assigned to an array variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit (StringVal "Hello")) ]
                             |> Expect.equal (Result.Err (InvalidArrayAssignment (Array "MyArr" [])))
                 , test "throws an exception when the index is negative" <|
@@ -310,7 +310,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal -1) ]) (Lit (NumberVal 999))
                             ]
@@ -325,7 +325,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal -1) ]) (Lit (NumberVal 999))
                             ]
@@ -340,7 +340,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 3) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
@@ -356,7 +356,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , Assign (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ]) (Lit (NumberVal 999))
                             , PrintLn (singleton (Var (Array "MyArr" [])))
@@ -364,19 +364,19 @@ suite =
                             |> Expect.equal (Result.Ok [ "{{100， 999}， {300， 400}}" ])
                 , test "throws an exception when it comes to an undefined function" <|
                     \_ ->
-                        run [ Assign (Scalar "x") (Fun (Function "未定義") [ Lit (NumberVal 0) ]) ]
+                        runStatements [ Assign (Scalar "x") (Fun (Function "未定義") [ Lit (NumberVal 0) ]) ]
                             |> Expect.equal (Result.Err (UndefinedFunction (Function "未定義")))
                 , test "throws an exception when it comes to undefined arguments" <|
                     \_ ->
-                        run [ Assign (Scalar "x") (Fun (Function "二乗") [ Var (Scalar "y") ]) ]
+                        runStatements [ Assign (Scalar "x") (Fun (Function "二乗") [ Var (Scalar "y") ]) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar "y")))
                 , test "throws an exception about args when its name and args are both undefined" <|
                     \_ ->
-                        run [ Assign (Scalar "x") (Fun (Function "未定義") [ Var (Scalar "y") ]) ]
+                        runStatements [ Assign (Scalar "x") (Fun (Function "未定義") [ Var (Scalar "y") ]) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar "y")))
                 , test "assigns values to multiple variables individually" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , Assign (Scalar "y") (Lit (NumberVal 1))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -384,7 +384,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "0" ])
                 , test "overrides a Scalar when it assigns twice" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , Assign (Scalar "x") (Lit (NumberVal 1))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -392,7 +392,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "1" ])
                 , test "overrides a number by s string" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , Assign (Scalar "x") (Lit (StringVal "Hello"))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -400,14 +400,14 @@ suite =
                             |> Expect.equal (Result.Ok [ "Hello" ])
                 , fuzz (pair int int) "calculates the addition of two numbers" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz (pair int int) "calculates the addision of a Scalar and a number" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal n))
                             , Assign (Scalar "x") (Plus (Var (Scalar "y")) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -415,7 +415,7 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz (pair int int) "calculates the addision of a number and a variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal m))
                             , Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Var (Scalar "y")))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -423,12 +423,12 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz (pair string string) "throws an exception if the both of addition are strings" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string string) "throws an exception if the both of addition are arrays" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Plus
                                     (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -438,34 +438,34 @@ suite =
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of addition is non numeric" <|
                     \( s, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of addition is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of addition is undefined" <|
                     \( y, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Var (Scalar y)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of addition is undefined" <|
                     \( n, y ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Plus (Lit (NumberVal n)) (Var (Scalar y))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int int) "calculates the subtraction of two numbers" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz (pair int int) "calculates the subtraction of a Scalar and a number" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal n))
                             , Assign (Scalar "x") (Minus (Var (Scalar "y")) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -473,7 +473,7 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz (pair int int) "calculates the subtraction of a number and a variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal m))
                             , Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Var (Scalar "y")))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -481,12 +481,12 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz (pair string string) "throws an exception if the both of subtraction are strings" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string string) "throws an exception if the both of subtraction are arrays" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Minus
                                     (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -496,34 +496,34 @@ suite =
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of subtraction is non numeric" <|
                     \( s, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of subtraction is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of subtraction is undefined" <|
                     \( y, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Var (Scalar y)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of subtraction is undefined" <|
                     \( n, y ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Minus (Lit (NumberVal n)) (Var (Scalar y))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int int) "calculates the multiplication of two numbers" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
                 , fuzz (pair int int) "calculates the multiplication of a Scalar and a number" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal n))
                             , Assign (Scalar "x") (Times (Var (Scalar "y")) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -531,7 +531,7 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
                 , fuzz (pair int int) "calculates the multiplication of a number and a variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal m))
                             , Assign (Scalar "x") (Times (Lit (NumberVal n)) (Var (Scalar "y")))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -539,12 +539,12 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n * m) ])
                 , fuzz (pair string string) "throws an exception if the both of multiplication are strings" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string string) "throws an exception if the both of multiplication are arrays" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Times
                                     (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -554,34 +554,34 @@ suite =
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of multiplication is non numeric" <|
                     \( s, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of multiplication is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of multiplication is undefined" <|
                     \( y, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Var (Scalar y)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of multiplication is undefined" <|
                     \( n, y ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Times (Lit (NumberVal n)) (Var (Scalar y))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int nonzero) "calculates the quotient of two numbers" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
                 , fuzz (pair int nonzero) "calculates the quotient of a Scalar and a number" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal n))
                             , Assign (Scalar "x") (Quot (Var (Scalar "y")) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -589,7 +589,7 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
                 , fuzz (pair int nonzero) "calculates the quotient of a number and a variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal m))
                             , Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Var (Scalar "y")))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -597,12 +597,12 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n // m) ])
                 , fuzz (pair string string) "throws an exception if the both of quotient are strings" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string string) "throws an exception if the both of quotient are arrays" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Quot
                                     (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -612,39 +612,39 @@ suite =
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of quotient is zero" <|
                     \n ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
                 , fuzz (pair string int) "throws an exception if the left of quotient is non numeric" <|
                     \( s, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of quotient is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string nonzero) "throws an exception if the left of quotient is undefined" <|
                     \( y, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Var (Scalar y)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of quotient is undefined" <|
                     \( n, y ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Quot (Lit (NumberVal n)) (Var (Scalar y))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int nonzero) "calculates the remainder of two numbers" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
                 , fuzz (pair int nonzero) "calculates the remainder of a Scalar and a number" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal n))
                             , Assign (Scalar "x") (Mod (Var (Scalar "y")) (Lit (NumberVal m)))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -652,7 +652,7 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
                 , fuzz (pair int nonzero) "calculates the remainder of a number and a variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "y") (Lit (NumberVal m))
                             , Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Var (Scalar "y")))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -660,12 +660,12 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (modBy m n) ])
                 , fuzz (pair string string) "throws an exception if the both of remainder are strings" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (StringVal s)) (Lit (StringVal t))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string string) "throws an exception if the both of remainder are arrays" <|
                     \( s, t ) ->
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" [])
                                 (Mod
                                     (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -675,42 +675,42 @@ suite =
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz int "throws an exception if the right of remainder is zero" <|
                     \n ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Err ZeroDivision)
                 , fuzz (pair string int) "throws an exception if the left of remainder is non numeric" <|
                     \( s, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (StringVal s)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair int string) "throws an exception if the right of remainder is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Lit (StringVal s))) ]
                             |> Expect.equal (Result.Err UnsupportedOperation)
                 , fuzz (pair string int) "throws an exception if the left of remainder is undefined" <|
                     \( y, n ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Var (Scalar y)) (Lit (NumberVal n))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 , fuzz (pair int string) "throws an exception if the right of remainder is undefined" <|
                     \( n, y ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Mod (Lit (NumberVal n)) (Var (Scalar y))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar y)))
                 ]
             , describe "printLn"
                 [ test "outputs a number value" <|
                     \_ ->
-                        run [ PrintLn (singleton (Lit (NumberVal 42))) ]
+                        runStatements [ PrintLn (singleton (Lit (NumberVal 42))) ]
                             |> Expect.equal (Result.Ok [ "42" ])
                 , test "outputs a string value" <|
                     \_ ->
-                        run [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                        runStatements [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
                             |> Expect.equal (Result.Ok [ "こんにちは、世界" ])
                 , test "outputs the empty array value" <|
                     \_ ->
-                        run [ PrintLn (singleton (Lit (ArrayVal Dict.empty))) ]
+                        runStatements [ PrintLn (singleton (Lit (ArrayVal Dict.empty))) ]
                             |> Expect.equal (Result.Ok [ "{}" ])
                 , test "outputs a 1-dim numeric array value" <|
                     \_ ->
@@ -719,7 +719,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run [ PrintLn (singleton (Lit arr)) ]
+                        runStatements [ PrintLn (singleton (Lit arr)) ]
                             |> Expect.equal (Result.Ok [ "{100， 200， 300}" ])
                 , test "outputs a 1-dim string array value" <|
                     \_ ->
@@ -728,7 +728,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, StringVal "A" ), ( 1, StringVal "B" ), ( 2, StringVal "C" ) ]
                         in
-                        run [ PrintLn (singleton (Lit arr)) ]
+                        runStatements [ PrintLn (singleton (Lit arr)) ]
                             |> Expect.equal (Result.Ok [ "{\"A\"， \"B\"， \"C\"}" ])
                 , test "outputs a 2-dim array value" <|
                     \_ ->
@@ -740,7 +740,7 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run [ PrintLn (singleton (Lit arr)) ]
+                        runStatements [ PrintLn (singleton (Lit arr)) ]
                             |> Expect.equal (Result.Ok [ "{{100， 200}， {300， 400}}" ])
                 , test "outputs a heterogeneous array value" <|
                     \_ ->
@@ -753,7 +753,7 @@ suite =
                                         , ( 2, ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ] )
                                         ]
                         in
-                        run [ PrintLn (singleton (Lit arr)) ]
+                        runStatements [ PrintLn (singleton (Lit arr)) ]
                             |> Expect.equal (Result.Ok [ "{100， \"B\"， {100， 200}}" ])
                 , test "outputs an array with undefined elements" <|
                     \_ ->
@@ -762,11 +762,11 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 1, NumberVal 100 ), ( 3, NumberVal 200 ) ]
                         in
-                        run [ PrintLn (singleton (Lit arr)) ]
+                        runStatements [ PrintLn (singleton (Lit arr)) ]
                             |> Expect.equal (Result.Ok [ "{undefined， 100， undefined， 200}" ])
                 , test "outputs a variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 42))
                             , PrintLn (singleton (Var (Scalar "x")))
                             ]
@@ -778,7 +778,7 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ), ( 2, NumberVal 300 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , PrintLn (singleton (Var (Array "MyArr" [ Lit (NumberVal 1) ])))
                             ]
@@ -793,14 +793,14 @@ suite =
                                         , ( 1, ArrayVal <| Dict.fromList [ ( 0, NumberVal 300 ), ( 1, NumberVal 400 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Array "MyArr" []) (Lit arr)
                             , PrintLn (singleton (Var (Array "MyArr" [ Lit (NumberVal 0), Lit (NumberVal 1) ])))
                             ]
                             |> Expect.equal (Result.Ok [ "200" ])
                 , test "outputs multiple items by concatination" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "kosu") (Lit (NumberVal 3))
                             , PrintLn
                                 (Nonempty (Var (Scalar "kosu"))
@@ -810,7 +810,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "3 個見つかった" ])
                 , test "outputs multiple lines in the reverse order" <|
                     \_ ->
-                        run
+                        runStatements
                             [ PrintLn (singleton (Lit (NumberVal 0)))
                             , PrintLn (singleton (Lit (NumberVal 1)))
                             , PrintLn (singleton (Lit (NumberVal 2)))
@@ -818,12 +818,12 @@ suite =
                             |> Expect.equal (Result.Ok [ "2", "1", "0" ])
                 , test "throws an exception by an undefined variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ PrintLn (singleton (Var (Scalar "x"))) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , test "throws an exception when one of items is an undefined variable" <|
                     \_ ->
-                        run
+                        runStatements
                             [ PrintLn
                                 (Nonempty (Var (Scalar "kosu"))
                                     [ Lit (StringVal " 個見つかった") ]
@@ -834,11 +834,11 @@ suite =
             , describe "print"
                 [ test "outputs a single item" <|
                     \_ ->
-                        run [ Print (singleton (Lit (NumberVal 0))) ]
+                        runStatements [ Print (singleton (Lit (NumberVal 0))) ]
                             |> Expect.equal (Result.Ok [ "0" ])
                 , test "outputs multiple items with concatination" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Print
                                 (Nonempty
                                     (Lit (NumberVal 0))
@@ -848,7 +848,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "012" ])
                 , test "outputs multiple statements without line break" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Print (singleton (Lit (NumberVal 0)))
                             , Print (singleton (Lit (NumberVal 1)))
                             , Print (singleton (Lit (NumberVal 2)))
@@ -856,14 +856,14 @@ suite =
                             |> Expect.equal (Result.Ok [ "012" ])
                 , test "outputs an item after print-line statements as a new line" <|
                     \_ ->
-                        run
+                        runStatements
                             [ PrintLn (singleton (Lit (NumberVal 0)))
                             , Print (singleton (Lit (NumberVal 1)))
                             ]
                             |> Expect.equal (Result.Ok [ "1", "0" ])
                 , test "outputs an item before print-line without line break" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Print (singleton (Lit (NumberVal 0)))
                             , PrintLn (singleton (Lit (NumberVal 1)))
                             ]
@@ -872,18 +872,18 @@ suite =
             , describe "print new line"
                 [ test "outputs a new line initially" <|
                     \_ ->
-                        run [ PrintNewLine ]
+                        runStatements [ PrintNewLine ]
                             |> Expect.equal (Result.Ok [ "" ])
                 , test "outputs a new line after print statement" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Print (singleton (Lit (NumberVal 0)))
                             , PrintNewLine
                             ]
                             |> Expect.equal (Result.Ok [ "0" ])
                 , test "outputs a new line after print-line statement" <|
                     \_ ->
-                        run
+                        runStatements
                             [ PrintLn (singleton (Lit (NumberVal 0)))
                             , PrintNewLine
                             ]
@@ -892,7 +892,7 @@ suite =
             , describe "increment"
                 [ fuzz (pair int int) "increments a value of the variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal n))
                             , Increment (Scalar "x") (Lit (NumberVal m))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -900,19 +900,19 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n + m) ])
                 , fuzz int "throws an exception if the variable is constant" <|
                     \m ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 0))
                             , Increment (Const "X") (Lit (NumberVal m))
                             ]
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , fuzz int "throws an exception if the Scalar is undefined" <|
                     \m ->
-                        run
+                        runStatements
                             [ Increment (Scalar "x") (Lit (NumberVal m)) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , fuzz (pair int string) "throws an exception if the argument is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal n))
                             , Increment (Scalar "x") (Lit (StringVal s))
                             ]
@@ -921,7 +921,7 @@ suite =
             , describe "decrement"
                 [ fuzz (pair int int) "decrements a value of the variable" <|
                     \( n, m ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal n))
                             , Decrement (Scalar "x") (Lit (NumberVal m))
                             , PrintLn (singleton (Var (Scalar "x")))
@@ -929,19 +929,19 @@ suite =
                             |> Expect.equal (Result.Ok [ String.fromInt (n - m) ])
                 , fuzz int "throws an exception if the variable is constant" <|
                     \m ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 0))
                             , Decrement (Const "X") (Lit (NumberVal m))
                             ]
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , fuzz int "throws an exception if the Scalar is undefined" <|
                     \m ->
-                        run
+                        runStatements
                             [ Decrement (Scalar "x") (Lit (NumberVal m)) ]
                             |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
                 , fuzz (pair int string) "throws an exception if the argument is non numeric" <|
                     \( n, s ) ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal n))
                             , Decrement (Scalar "x") (Lit (StringVal s))
                             ]
@@ -951,35 +951,35 @@ suite =
                 [ describe "eq"
                     [ test "evaluates the then clause if n1 == n2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluate the then clause if n1 /= n2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if s1 == s2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (StringVal "True")) (Lit (StringVal "True")))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluates the then clause if s1 /= s2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (StringVal "True")) (Lit (StringVal "False")))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "throws an exception if the condition is array == array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Eq
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -990,19 +990,19 @@ suite =
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the condition is string == number" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (StringVal "True")) (Lit (NumberVal 0))) []
                                 ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the condition is number == string" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Lit (NumberVal 0)) (Lit (StringVal "True"))) []
                                 ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the left of == is undefined" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Eq (Var (Scalar "x")) (Lit (StringVal "True"))) []
                                 ]
                                 |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
@@ -1010,35 +1010,35 @@ suite =
                 , describe "neq"
                     [ test "doesn't evaluate the then clause if n1 == n2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if n1 /= n2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Neq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluate the then clause if s1 == s2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Neq (Lit (StringVal "True")) (Lit (StringVal "True")))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if s1 /= s2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Neq (Lit (StringVal "True")) (Lit (StringVal "False")))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "throws an exception if the condition is array /= array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Neq
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -1051,33 +1051,33 @@ suite =
                 , describe "gt"
                     [ test "doesn't evaluate the then clause if e1 == e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Gt (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if e1 > e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Gt (Lit (NumberVal 1)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluate the then clause if e1 < e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Gt (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "throws an exception if the both of innequation are strings" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Gt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the both of innequation are array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Gt
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -1090,33 +1090,33 @@ suite =
                 , describe "ge"
                     [ test "evaluates the then clause if e1 == e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Ge (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "evaluates the then clause if e1 > e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Ge (Lit (NumberVal 1)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluate the then clause if e1 < e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Ge (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "throws an exception if the both of innequation are strings" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Ge (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the both of innequation are array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Ge
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -1129,33 +1129,33 @@ suite =
                 , describe "le"
                     [ test "evaluates the then clause if e1 == e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Le (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doesn't evaluate the then clause if e1 > e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Le (Lit (NumberVal 1)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if e1 < e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Le (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "throws an exception if the both of innequation are strings" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Le (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the both of innequation are array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Le
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -1168,33 +1168,33 @@ suite =
                 , describe "lt"
                     [ test "doens't evaluate the then clause if e1 == e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Lt (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "doesn't evaluate the then clause if e1 > e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Lt (Lit (NumberVal 1)) (Lit (NumberVal 0)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if e1 < e2" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Lt (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 ]
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "throws an exception if the both of innequation are strings" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If (Lt (Lit (StringVal "True")) (Lit (StringVal "True"))) [] ]
                                 |> Expect.equal (Result.Err UnsupportedOperation)
                     , test "throws an exception if the both of innequation are array" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Lt
                                         (Lit (ArrayVal <| Dict.fromList [ ( 0, NumberVal 100 ), ( 1, NumberVal 200 ) ]))
@@ -1207,7 +1207,7 @@ suite =
                 , describe "and"
                     [ test "evaluates the then clause if True && True" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (And
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
@@ -1218,7 +1218,7 @@ suite =
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doens't evaluate the then clause if False && True" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (And
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
@@ -1229,7 +1229,7 @@ suite =
                                 |> Expect.equal (Result.Ok [])
                     , test "doens't evaluate the then clause if True && False" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (And
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
@@ -1240,7 +1240,7 @@ suite =
                                 |> Expect.equal (Result.Ok [])
                     , test "doens't evaluate the then clause if False && False" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (And
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
@@ -1253,7 +1253,7 @@ suite =
                 , describe "or"
                     [ test "evaluates the then clause if True || True" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Or
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
@@ -1264,7 +1264,7 @@ suite =
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "evaluates the then clause if False || True" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Or
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
@@ -1275,7 +1275,7 @@ suite =
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "evaluates the then clause if True || False" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Or
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
@@ -1286,7 +1286,7 @@ suite =
                                 |> Expect.equal (Result.Ok [ "True" ])
                     , test "doens't evaluate the then clause if False || False" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Or
                                         (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
@@ -1299,7 +1299,7 @@ suite =
                 , describe "not"
                     [ test "doesn't evaluate the then clause if the original condition holds" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0))))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
@@ -1307,7 +1307,7 @@ suite =
                                 |> Expect.equal (Result.Ok [])
                     , test "evaluates the then clause if the original condition doesn' hold" <|
                         \_ ->
-                            run
+                            runStatements
                                 [ If
                                     (Not (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1))))
                                     [ PrintLn (singleton (Lit (StringVal "True"))) ]
@@ -1318,7 +1318,7 @@ suite =
             , describe "if-else"
                 [ test "evaluate the then clause if the guard condition holds" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IfElse (Eq (Lit (NumberVal 0)) (Lit (NumberVal 0)))
                                 [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 [ PrintLn (singleton (Lit (StringVal "False"))) ]
@@ -1326,7 +1326,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "True" ])
                 , test "evaluates the else clause if the guard doesn' hold" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IfElse (Eq (Lit (NumberVal 0)) (Lit (NumberVal 1)))
                                 [ PrintLn (singleton (Lit (StringVal "True"))) ]
                                 [ PrintLn (singleton (Lit (StringVal "False"))) ]
@@ -1336,7 +1336,7 @@ suite =
             , describe "pre-check loop"
                 [ test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 0)))
                                 [ PrintLn (singleton (Lit (StringVal "Loop")))
@@ -1346,7 +1346,7 @@ suite =
                             |> Expect.equal (Result.Ok [])
                 , test "evaluates the loop contents only once" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 1)))
                                 [ PrintLn (singleton (Lit (StringVal "Loop")))
@@ -1356,7 +1356,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "Loop" ])
                 , test "evaluates the loop contents multiple times" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PreCheckLoop (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
                                 [ PrintLn (singleton (Lit (StringVal "Loop")))
@@ -1368,7 +1368,7 @@ suite =
             , describe "post-check loop"
                 [ test "evaluates the loop contents even if the condition initially doesn't hold" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ PrintLn (singleton (Lit (StringVal "Loop"))) ]
@@ -1377,7 +1377,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "Loop" ])
                 , test "evaluates the loop contents only twice" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ PrintLn (singleton (Lit (StringVal "Loop")))
@@ -1388,7 +1388,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "Loop", "Loop" ])
                 , test "evaluates the loop contents multiple times" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 0))
                             , PostCheckLoop
                                 [ PrintLn (singleton (Lit (StringVal "Loop")))
@@ -1401,7 +1401,7 @@ suite =
             , describe "increment loop"
                 [ test "evaluates the loop contents during the condition holds" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 4))
@@ -1411,7 +1411,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "4", "3", "2", "1", "0" ])
                 , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 1))
                                 (Lit (NumberVal 0))
@@ -1421,7 +1421,7 @@ suite =
                             |> Expect.equal (Result.Ok [])
                 , test "destructs an already defined Scalar as a counter" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 42))
                             , IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
@@ -1432,7 +1432,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "0" ])
                 , test "leaves the counter Scalar after the loop" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IncrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 4))
@@ -1443,7 +1443,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "5" ])
                 , test "evaluates the loop if the counter is a constant but undefined" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IncrementLoop (Const "X")
                                 (Lit (NumberVal 1))
                                 (Lit (NumberVal 0))
@@ -1453,7 +1453,7 @@ suite =
                             |> Expect.equal (Result.Ok [])
                 , test "throws an exception if the counter is a pre-defined constant" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 0))
                             , IncrementLoop (Const "X")
                                 (Lit (NumberVal 1))
@@ -1464,7 +1464,7 @@ suite =
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , test "throws an exception if the counter is constant and updated" <|
                     \_ ->
-                        run
+                        runStatements
                             [ IncrementLoop (Const "X")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 0))
@@ -1476,7 +1476,7 @@ suite =
             , describe "decrement loop"
                 [ test "evaluates the loop contents during the condition holds" <|
                     \_ ->
-                        run
+                        runStatements
                             [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 0))
@@ -1486,7 +1486,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "0", "1", "2", "3", "4" ])
                 , test "doen't evaluate the loop contents if the condition initially doesn't hold" <|
                     \_ ->
-                        run
+                        runStatements
                             [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
@@ -1496,7 +1496,7 @@ suite =
                             |> Expect.equal (Result.Ok [])
                 , test "destructs an already defined Scalar as a counter" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "x") (Lit (NumberVal 42))
                             , DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 0))
@@ -1507,7 +1507,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "0" ])
                 , test "leaves the counter Scalar after the loop" <|
                     \_ ->
-                        run
+                        runStatements
                             [ DecrementLoop (Scalar "x")
                                 (Lit (NumberVal 4))
                                 (Lit (NumberVal 0))
@@ -1518,7 +1518,7 @@ suite =
                             |> Expect.equal (Result.Ok [ "-1" ])
                 , test "evaluates the loop if the counter is a constant but undefined" <|
                     \_ ->
-                        run
+                        runStatements
                             [ DecrementLoop (Const "X")
                                 (Lit (NumberVal 0))
                                 (Lit (NumberVal 1))
@@ -1528,7 +1528,7 @@ suite =
                             |> Expect.equal (Result.Ok [])
                 , test "throws an exception if the counter is a pre-defined constant" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Const "X") (Lit (NumberVal 0))
                             , DecrementLoop (Const "X")
                                 (Lit (NumberVal 0))
@@ -1539,7 +1539,7 @@ suite =
                             |> Expect.equal (Result.Err (ConstReassignment (Const "X")))
                 , test "throws an exception if the counter is constant and updated" <|
                     \_ ->
-                        run
+                        runStatements
                             [ DecrementLoop (Const "X")
                                 (Lit (NumberVal 1))
                                 (Lit (NumberVal 0))
@@ -1553,22 +1553,22 @@ suite =
             [ describe "二乗" <|
                 [ test "calculates the square of the arg" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (NumberVal 3) ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Ok [ "9" ])
                 , test "throws an exception if invoked with no args" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "二乗") []) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "二乗") []) ]
                             |> Expect.equal (Result.Err (InvalidArgument []))
                 , test "throws an exception if invoked with 2 args" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (NumberVal 0), Lit (NumberVal 1) ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (NumberVal 0), Lit (NumberVal 1) ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0, NumberVal 1 ]))
                 , test "throws an exception if invoked with a string arg" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (StringVal "0") ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit (StringVal "0") ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0" ]))
                 , test "throws an exception if invoked with an array arg" <|
                     \_ ->
@@ -1576,28 +1576,28 @@ suite =
                             arr =
                                 ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
                         in
-                        run [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit arr ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "二乗") [ Lit arr ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ arr ]))
                 ]
             , describe "べき乗" <|
                 [ test "calculates the power of the args" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (NumberVal 2), Lit (NumberVal 3) ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Ok [ "8" ])
                 , test "throws an exception if invoked with no args" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "べき乗") []) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "べき乗") []) ]
                             |> Expect.equal (Result.Err (InvalidArgument []))
                 , test "throws an exception if invoked with 1 arg" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (NumberVal 0) ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (NumberVal 0) ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0 ]))
                 , test "throws an exception if invoked with 3 args" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res")
                                 (Fun (Function "べき乗")
                                     [ Lit (NumberVal 0), Lit (NumberVal 1), Lit (NumberVal 2) ]
@@ -1606,7 +1606,7 @@ suite =
                             |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0, NumberVal 1, NumberVal 2 ]))
                 , test "throws an exception if invoked with a string arg" <|
                     \_ ->
-                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (StringVal "0"), Lit (StringVal "1") ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit (StringVal "0"), Lit (StringVal "1") ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0", StringVal "1" ]))
                 , test "throws an exception if invoked with an array arg" <|
                     \_ ->
@@ -1617,7 +1617,7 @@ suite =
                             arr2 =
                                 ArrayVal <| Dict.fromList [ ( 0, NumberVal 2 ) ]
                         in
-                        run [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit arr1, Lit arr2 ]) ]
+                        runStatements [ Assign (Scalar "res") (Fun (Function "べき乗") [ Lit arr1, Lit arr2 ]) ]
                             |> Expect.equal (Result.Err (InvalidArgument [ arr1, arr2 ]))
                 ]
             , describe "要素数" <|
@@ -1627,7 +1627,7 @@ suite =
                             arr =
                                 ArrayVal <| Dict.fromList []
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
@@ -1638,7 +1638,7 @@ suite =
                             arr =
                                 ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
@@ -1649,7 +1649,7 @@ suite =
                             arr =
                                 ArrayVal <| Dict.fromList [ ( 0, NumberVal 0 ), ( 1, NumberVal 1 ), ( 2, NumberVal 2 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
@@ -1665,7 +1665,7 @@ suite =
                                         , ( 2, ArrayVal <| Dict.fromList [ ( 0, NumberVal 500 ), ( 1, NumberVal 600 ) ] )
                                         ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
@@ -1677,14 +1677,14 @@ suite =
                                 ArrayVal <|
                                     Dict.fromList [ ( 100, NumberVal 1 ), ( 200, NumberVal 2 ), ( 300, NumberVal 3 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Ok [ "3" ])
                 , test "throws an exception when invoked with no args" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") []) ]
                             |> Expect.equal (Result.Err (InvalidArgument []))
                 , test "throws an exception when invoked with 2 args" <|
@@ -1696,21 +1696,21 @@ suite =
                             arr2 =
                                 ArrayVal <| Dict.fromList [ ( 0, NumberVal 1 ) ]
                         in
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit arr1, Lit arr2 ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Err (InvalidArgument [ arr1, arr2 ]))
                 , test "throws an exception when invoked with a number arg" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit (NumberVal 0) ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]
                             |> Expect.equal (Result.Err (InvalidArgument [ NumberVal 0 ]))
                 , test "throws an exception when invoked with a string arg" <|
                     \_ ->
-                        run
+                        runStatements
                             [ Assign (Scalar "res") (Fun (Function "要素数") [ Lit (StringVal "0") ])
                             , PrintLn (singleton (Var (Scalar "res")))
                             ]

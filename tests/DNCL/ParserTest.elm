@@ -2037,23 +2037,32 @@ suite =
 
                         """
                         |> Expect.equal (Result.Ok [])
-            , test "parses a single statement withou blank lines" <|
+            , test "parses a single statement without blank lines" <|
                 \_ ->
                     Parser.run dnclProgram
                         """ 「こんにちは、世界」を表示する"""
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal
+                            (Result.Ok
+                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                            )
             , test "parses a single statment with proceding line break" <|
                 \_ ->
                     Parser.run dnclProgram
                         """
                             「こんにちは、世界」を表示する"""
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal
+                            (Result.Ok
+                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                            )
             , test "parses a single statement with succeeding line break" <|
                 \_ ->
                     Parser.run dnclProgram
                         """ 「こんにちは、世界」を表示する
                         """
-                        |> Expect.equal (Result.Ok [ PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ])
+                        |> Expect.equal
+                            (Result.Ok
+                                [ Stmt <| PrintLn (singleton (Lit (StringVal "こんにちは、世界"))) ]
+                            )
             , test "parses multiple line-statements" <|
                 \_ ->
                     Parser.run dnclProgram
@@ -2062,8 +2071,8 @@ suite =
                         """
                         |> Expect.equal
                             (Result.Ok
-                                [ Assign (Scalar "x") (Lit (NumberVal 42))
-                                , PrintLn (Nonempty (Var (Scalar "x")) [])
+                                [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 42))
+                                , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
                                 ]
                             )
             , test "parses multiple block-statements" <|
@@ -2078,10 +2087,12 @@ suite =
                         """
                         |> Expect.equal
                             (Result.Ok
-                                [ If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                    [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                , If (Lt (Var (Scalar "y")) (Lit (NumberVal 3)))
-                                    [ Assign (Scalar "y") (Lit (NumberVal 3)) ]
+                                [ Stmt <|
+                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                , Stmt <|
+                                    If (Lt (Var (Scalar "y")) (Lit (NumberVal 3)))
+                                        [ Assign (Scalar "y") (Lit (NumberVal 3)) ]
                                 ]
                             )
             , test "parses a line-statements and a block-statement" <|
@@ -2094,9 +2105,10 @@ suite =
                         """
                         |> Expect.equal
                             (Result.Ok
-                                [ Assign (Scalar "x") (Lit (NumberVal 0))
-                                , If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                    [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 0))
+                                , Stmt <|
+                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
                                 ]
                             )
             , test "parses a block-statement and a line-statements" <|
@@ -2109,9 +2121,10 @@ suite =
                         """
                         |> Expect.equal
                             (Result.Ok
-                                [ If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
-                                    [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
-                                , PrintLn (Nonempty (Var (Scalar "x")) [])
+                                [ Stmt <|
+                                    If (Lt (Var (Scalar "x")) (Lit (NumberVal 3)))
+                                        [ Assign (Scalar "x") (Lit (NumberVal 3)) ]
+                                , Stmt <| PrintLn (Nonempty (Var (Scalar "x")) [])
                                 ]
                             )
             , test "cannot parse a program with a trailing erroneous fragment" <|

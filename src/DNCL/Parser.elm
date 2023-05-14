@@ -374,7 +374,7 @@ boolFactor =
 statement : Parser Statement
 statement =
     oneOf
-        [ lineStatement
+        [ line lineStatement
         , blockStatement
         ]
 
@@ -498,9 +498,7 @@ statementLoop : Procedure -> Parser (Step Procedure Procedure)
 statementLoop proc =
     oneOf
         [ succeed (\stmt -> Loop (stmt :: proc))
-            |= line lineStatement
-        , succeed (\stmt -> Loop (stmt :: proc))
-            |= blockStatement
+            |= statement
         , succeed (Loop proc)
             |. blankLine
         , succeed ()
@@ -622,8 +620,27 @@ decrementLoop =
         |. line (symbol "を繰り返す")
 
 
+snippet =
+    oneOf
+        [ succeed Stmt
+            |= statement
+        ]
+
+
+snippetLoop : List Snippet -> Parser (Step (List Snippet) (List Snippet))
+snippetLoop snips =
+    oneOf
+        [ succeed (\snip -> Loop (snip :: snips))
+            |= snippet
+        , succeed (Loop snips)
+            |. blankLine
+        , succeed ()
+            |> map (\_ -> Done (List.reverse snips))
+        ]
+
+
 dnclProgram : Parser DNCLProgram
 dnclProgram =
-    loop [] statementLoop
+    loop [] snippetLoop
         |. blanks
         |. end

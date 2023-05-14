@@ -75,5 +75,18 @@ type Statement
     | DecrementLoop Variable ArithExp ArithExp ArithExp Procedure
 
 
+type Parameter
+    = Param Name
+
+
+type FunctionDecl
+    = Decl Name (List Parameter) Procedure
+
+
+type Snippet
+    = Stmt Statement
+    | FunDecl FunctionDecl
+
+
 type alias DNCLProgram =
-    Procedure
+    List Snippet

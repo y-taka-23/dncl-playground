@@ -8,6 +8,7 @@ module DNCL.Evaluator exposing
     )
 
 import DNCL.AST exposing (..)
+import Debug
 import Dict exposing (Dict)
 import List.Nonempty as Nonempty exposing (Nonempty)
 import Result.Extra as Result
@@ -93,7 +94,7 @@ step ev =
         [] ->
             Ok <| Completed ev
 
-        (Assign v aexp) :: stmts ->
+        (Stmt (Assign v aexp)) :: snips ->
             case evalArith ev.symbolTable aexp of
                 Err e ->
                     Err e
@@ -108,9 +109,9 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | continuation = stmts, symbolTable = st }
+                            Ok <| Continued { ev | continuation = snips, symbolTable = st }
 
-        (PrintLn ps) :: stmts ->
+        (Stmt (PrintLn ps)) :: snips ->
             case format ev.symbolTable ps of
                 Err e ->
                     Err e
@@ -120,9 +121,9 @@ step ev =
                         out =
                             { buffer = "", lines = (ev.output.buffer ++ s) :: ev.output.lines }
                     in
-                    Ok <| Continued { ev | continuation = stmts, output = out }
+                    Ok <| Continued { ev | continuation = snips, output = out }
 
-        (Print ps) :: stmts ->
+        (Stmt (Print ps)) :: snips ->
             case format ev.symbolTable ps of
                 Err e ->
                     Err e
@@ -132,67 +133,77 @@ step ev =
                         out =
                             { buffer = ev.output.buffer ++ s, lines = ev.output.lines }
                     in
-                    Ok <| Continued { ev | continuation = stmts, output = out }
+                    Ok <| Continued { ev | continuation = snips, output = out }
 
-        PrintNewLine :: stmts ->
+        (Stmt PrintNewLine) :: snips ->
             let
                 out =
                     { buffer = "", lines = ev.output.buffer :: ev.output.lines }
             in
-            Ok <| Continued { ev | continuation = stmts, output = out }
+            Ok <| Continued { ev | continuation = snips, output = out }
 
-        (Increment v aexp) :: stmts ->
+        (Stmt (Increment v aexp)) :: snips ->
             let
                 stmt =
-                    Assign v (Plus (Var v) aexp)
+                    Stmt <| Assign v (Plus (Var v) aexp)
             in
-            Ok <| Continued { ev | continuation = stmt :: stmts }
+            Ok <| Continued { ev | continuation = stmt :: snips }
 
-        (Decrement v aexp) :: stmts ->
+        (Stmt (Decrement v aexp)) :: snips ->
             let
                 stmt =
-                    Assign v (Minus (Var v) aexp)
+                    Stmt <| Assign v (Minus (Var v) aexp)
             in
-            Ok <| Continued { ev | continuation = stmt :: stmts }
+            Ok <| Continued { ev | continuation = stmt :: snips }
 
         -- TODO: List concatination looks show
-        (If bexp thenStmts) :: stmts ->
+        (Stmt (If bexp thenStmts)) :: snips ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <| Continued { ev | continuation = thenStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = List.map Stmt thenStmts ++ snips }
 
                 Ok False ->
-                    Ok <| Continued { ev | continuation = stmts }
+                    Ok <| Continued { ev | continuation = snips }
 
-        (IfElse bexp thenStmts elseStmts) :: stmts ->
+        (Stmt (IfElse bexp thenStmts elseStmts)) :: snips ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <| Continued { ev | continuation = thenStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = List.map Stmt thenStmts ++ snips }
 
                 Ok False ->
-                    Ok <| Continued { ev | continuation = elseStmts ++ stmts }
+                    Ok <| Continued { ev | continuation = List.map Stmt elseStmts ++ snips }
 
-        (PreCheckLoop bexp loopStmts) :: stmts ->
+        (Stmt (PreCheckLoop bexp loopStmts)) :: snips ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
+                    Ok <|
+                        Continued
+                            { ev
+                                | continuation =
+                                    List.map Stmt loopStmts ++ Stmt (PreCheckLoop bexp loopStmts) :: snips
+                            }
 
                 Ok False ->
-                    Ok <| Continued { ev | continuation = stmts }
+                    Ok <| Continued { ev | continuation = snips }
 
-        (PostCheckLoop loopStmts bexp) :: stmts ->
-            Ok <| Continued { ev | continuation = loopStmts ++ PreCheckLoop bexp loopStmts :: stmts }
+        (Stmt (PostCheckLoop loopStmts bexp)) :: snips ->
+            Ok <|
+                Continued
+                    { ev
+                        | continuation =
+                            List.map Stmt loopStmts ++ Stmt (PreCheckLoop bexp loopStmts) :: snips
+                    }
 
-        (IncrementLoop v from to diff loopStmts) :: stmts ->
+        (Stmt (IncrementLoop v from to diff loopStmts)) :: snips ->
             case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
@@ -203,7 +214,7 @@ step ev =
                             Le (Var v) to
 
                         loop =
-                            PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
+                            Stmt <| PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
                     in
                     case assignVar ev.symbolTable v n of
                         Err e ->
@@ -214,9 +225,9 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | continuation = loop :: stmts, symbolTable = st }
+                            Ok <| Continued { ev | continuation = loop :: snips, symbolTable = st }
 
-        (DecrementLoop v from to diff loopStmts) :: stmts ->
+        (Stmt (DecrementLoop v from to diff loopStmts)) :: snips ->
             case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
@@ -227,7 +238,7 @@ step ev =
                             Ge (Var v) to
 
                         loop =
-                            PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
+                            Stmt <| PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
                     in
                     case assignVar ev.symbolTable v n of
                         Err e ->
@@ -238,7 +249,10 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | continuation = loop :: stmts, symbolTable = st }
+                            Ok <| Continued { ev | continuation = loop :: snips, symbolTable = st }
+
+        (FunDecl decl) :: snips ->
+            Debug.todo "Function Declaration"
 
 
 lookupVar : SymbolTable -> Variable -> Result Exception Value
