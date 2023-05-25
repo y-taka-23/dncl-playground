@@ -15,9 +15,18 @@ import Result.Extra as Result
 
 
 type alias Evaluator =
-    { callStack : List DNCLProgram
+    { callStack : CallStack
     , symbolTable : SymbolTable
     , output : Buffer
+    }
+
+
+type alias CallStack =
+    List StackFrame
+
+
+type alias StackFrame =
+    { continuation : DNCLProgram
     }
 
 
@@ -79,7 +88,7 @@ type Exception
 
 load : DNCLProgram -> Evaluator
 load prog =
-    { callStack = [ prog ]
+    { callStack = initCallStack prog
     , symbolTable =
         { variables = Dict.empty
         , functions = builtinFuns
@@ -88,16 +97,45 @@ load prog =
     }
 
 
+initCallStack : DNCLProgram -> CallStack
+initCallStack prog =
+    [ { continuation = prog } ]
+
+
+fetchSnippet : CallStack -> Maybe ( Snippet, CallStack )
+fetchSnippet stack =
+    case stack of
+        [] ->
+            Nothing
+
+        frame :: frames ->
+            case frame.continuation of
+                [] ->
+                    -- Unwind: return from the subroutine
+                    fetchSnippet frames
+
+                snip :: snips ->
+                    Just ( snip, { continuation = snips } :: frames )
+
+
+prependProc : Procedure -> CallStack -> CallStack
+prependProc proc stack =
+    case stack of
+        [] ->
+            [ { continuation = List.map Stmt proc } ]
+
+        frame :: frames ->
+            -- TODO: List concatination looks show
+            { continuation = List.map Stmt proc ++ frame.continuation } :: frames
+
+
 step : Evaluator -> Result Exception StepResult
 step ev =
-    case ev.callStack of
-        [] ->
+    case fetchSnippet ev.callStack of
+        Nothing ->
             Ok <| Completed ev
 
-        [] :: cont ->
-            Ok <| Continued { ev | callStack = cont }
-
-        ((Stmt (Assign v aexp)) :: snips) :: cont ->
+        Just ( Stmt (Assign v aexp), stack ) ->
             case evalArith ev.symbolTable aexp of
                 Err e ->
                     Err e
@@ -112,9 +150,9 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | callStack = snips :: cont, symbolTable = st }
+                            Ok <| Continued { ev | callStack = stack, symbolTable = st }
 
-        ((Stmt (PrintLn ps)) :: snips) :: cont ->
+        Just ( Stmt (PrintLn ps), stack ) ->
             case format ev.symbolTable ps of
                 Err e ->
                     Err e
@@ -124,9 +162,9 @@ step ev =
                         out =
                             { buffer = "", lines = (ev.output.buffer ++ s) :: ev.output.lines }
                     in
-                    Ok <| Continued { ev | callStack = snips :: cont, output = out }
+                    Ok <| Continued { ev | callStack = stack, output = out }
 
-        ((Stmt (Print ps)) :: snips) :: cont ->
+        Just ( Stmt (Print ps), stack ) ->
             case format ev.symbolTable ps of
                 Err e ->
                     Err e
@@ -136,77 +174,74 @@ step ev =
                         out =
                             { buffer = ev.output.buffer ++ s, lines = ev.output.lines }
                     in
-                    Ok <| Continued { ev | callStack = snips :: cont, output = out }
+                    Ok <| Continued { ev | callStack = stack, output = out }
 
-        ((Stmt PrintNewLine) :: snips) :: cont ->
+        Just ( Stmt PrintNewLine, stack ) ->
             let
                 out =
                     { buffer = "", lines = ev.output.buffer :: ev.output.lines }
             in
-            Ok <| Continued { ev | callStack = snips :: cont, output = out }
+            Ok <| Continued { ev | callStack = stack, output = out }
 
-        ((Stmt (Increment v aexp)) :: snips) :: cont ->
+        Just ( Stmt (Increment v aexp), stack ) ->
             let
                 stmt =
-                    Stmt <| Assign v (Plus (Var v) aexp)
+                    Assign v (Plus (Var v) aexp)
             in
-            Ok <| Continued { ev | callStack = (stmt :: snips) :: cont }
+            Ok <| Continued { ev | callStack = prependProc [ stmt ] stack }
 
-        ((Stmt (Decrement v aexp)) :: snips) :: cont ->
+        Just ( Stmt (Decrement v aexp), stack ) ->
             let
                 stmt =
-                    Stmt <| Assign v (Minus (Var v) aexp)
+                    Assign v (Minus (Var v) aexp)
             in
-            Ok <| Continued { ev | callStack = (stmt :: snips) :: cont }
+            Ok <| Continued { ev | callStack = prependProc [ stmt ] stack }
 
-        -- TODO: List concatination looks show
-        ((Stmt (If bexp thenStmts)) :: snips) :: cont ->
+        Just ( Stmt (If bexp thenStmts), stack ) ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <| Continued { ev | callStack = (List.map Stmt thenStmts ++ snips) :: cont }
+                    Ok <| Continued { ev | callStack = prependProc thenStmts stack }
 
                 Ok False ->
-                    Ok <| Continued { ev | callStack = snips :: cont }
+                    Ok <| Continued { ev | callStack = stack }
 
-        ((Stmt (IfElse bexp thenStmts elseStmts)) :: snips) :: cont ->
+        Just ( Stmt (IfElse bexp thenStmts elseStmts), stack ) ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <| Continued { ev | callStack = (List.map Stmt thenStmts ++ snips) :: cont }
+                    Ok <| Continued { ev | callStack = prependProc thenStmts stack }
 
                 Ok False ->
-                    Ok <| Continued { ev | callStack = (List.map Stmt elseStmts ++ snips) :: cont }
+                    Ok <| Continued { ev | callStack = prependProc elseStmts stack }
 
-        ((Stmt (PreCheckLoop bexp loopStmts)) :: snips) :: cont ->
+        Just ( Stmt (PreCheckLoop bexp loopStmts), stack ) ->
             case evalBool ev.symbolTable bexp of
                 Err e ->
                     Err e
 
                 Ok True ->
-                    Ok <|
-                        Continued
-                            { ev
-                                | callStack =
-                                    (List.map Stmt loopStmts ++ Stmt (PreCheckLoop bexp loopStmts) :: snips) :: cont
-                            }
+                    let
+                        stmt =
+                            PreCheckLoop bexp loopStmts
+                    in
+                    Ok <| Continued { ev | callStack = prependProc loopStmts <| prependProc [ stmt ] stack }
 
                 Ok False ->
-                    Ok <| Continued { ev | callStack = snips :: cont }
+                    Ok <| Continued { ev | callStack = stack }
 
-        ((Stmt (PostCheckLoop loopStmts bexp)) :: snips) :: cont ->
-            Ok <|
-                Continued
-                    { ev
-                        | callStack =
-                            (List.map Stmt loopStmts ++ Stmt (PreCheckLoop bexp loopStmts) :: snips) :: cont
-                    }
+        Just ( Stmt (PostCheckLoop loopStmts bexp), stack ) ->
+            let
+                stmt =
+                    PreCheckLoop bexp loopStmts
+            in
+            Ok <| Continued { ev | callStack = prependProc loopStmts <| prependProc [ stmt ] stack }
 
-        ((Stmt (IncrementLoop v from to diff loopStmts)) :: snips) :: cont ->
+        Just ( Stmt (IncrementLoop v from to diff loopStmts), stack ) ->
             case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
@@ -216,8 +251,8 @@ step ev =
                         bexp =
                             Le (Var v) to
 
-                        loop =
-                            Stmt <| PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
+                        stmt =
+                            PreCheckLoop bexp (loopStmts ++ [ Increment v diff ])
                     in
                     case assignVar ev.symbolTable v n of
                         Err e ->
@@ -228,9 +263,9 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | callStack = (loop :: snips) :: cont, symbolTable = st }
+                            Ok <| Continued { ev | callStack = prependProc [ stmt ] stack, symbolTable = st }
 
-        ((Stmt (DecrementLoop v from to diff loopStmts)) :: snips) :: cont ->
+        Just ( Stmt (DecrementLoop v from to diff loopStmts), stack ) ->
             case evalArith ev.symbolTable from of
                 Err e ->
                     Err e
@@ -240,8 +275,8 @@ step ev =
                         bexp =
                             Ge (Var v) to
 
-                        loop =
-                            Stmt <| PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
+                        stmt =
+                            PreCheckLoop bexp (loopStmts ++ [ Decrement v diff ])
                     in
                     case assignVar ev.symbolTable v n of
                         Err e ->
@@ -252,9 +287,9 @@ step ev =
                                 st =
                                     updateVars ev.symbolTable vs
                             in
-                            Ok <| Continued { ev | callStack = (loop :: snips) :: cont, symbolTable = st }
+                            Ok <| Continued { ev | callStack = prependProc [ stmt ] stack, symbolTable = st }
 
-        ((FunDecl decl) :: snips) :: cont ->
+        Just ( FunDecl decl, stack ) ->
             Debug.todo "Function Declaration"
 
 
