@@ -32,6 +32,10 @@ type Function
     = Function Name
 
 
+type VoidFunction
+    = VoidFunction Name
+
+
 type ArithExp
     = Lit Value
     | Var Variable

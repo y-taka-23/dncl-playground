@@ -8,7 +8,6 @@ module DNCL.Evaluator exposing
     )
 
 import DNCL.AST exposing (..)
-import Debug
 import Dict exposing (Dict)
 import List.Nonempty as Nonempty exposing (Nonempty)
 import Result.Extra as Result
@@ -33,6 +32,7 @@ type alias StackFrame =
 type alias SymbolTable =
     { variables : Variables
     , functions : Functions
+    , voidFunctions : VoidFunctions
     }
 
 
@@ -42,6 +42,10 @@ type alias Variables =
 
 type alias Functions =
     Dict Name FunctionDef
+
+
+type alias VoidFunctions =
+    Dict Name Procedure
 
 
 type alias FunctionDef =
@@ -97,6 +101,7 @@ initSymbolTable : SymbolTable
 initSymbolTable =
     { variables = Dict.empty
     , functions = builtinFuns
+    , voidFunctions = Dict.empty
     }
 
 
@@ -141,6 +146,20 @@ updateVars vs =
 
                 updated =
                     { st | variables = vs }
+            in
+            { frame | symbolTable = updated }
+
+
+declareVoidFun : FunctionDecl -> CallStack -> CallStack
+declareVoidFun (Decl f _ body) =
+    updateTopFrame <|
+        \frame ->
+            let
+                st =
+                    frame.symbolTable
+
+                updated =
+                    { st | voidFunctions = Dict.insert f body st.voidFunctions }
             in
             { frame | symbolTable = updated }
 
@@ -302,7 +321,7 @@ step ev =
                             Ok <| Continued { ev | callStack = prependProc [ stmt ] <| updateVars vs stack }
 
         Just ( FunDecl decl, _, stack ) ->
-            Debug.todo "Function Declaration"
+            Ok <| Continued { ev | callStack = declareVoidFun decl stack }
 
 
 lookupVar : SymbolTable -> Variable -> Result Exception Value
