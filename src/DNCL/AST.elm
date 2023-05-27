@@ -84,7 +84,7 @@ type Parameter
 
 
 type FunctionDecl
-    = Decl Name (List Parameter) Procedure
+    = Decl VoidFunction (List Parameter) Procedure
 
 
 type Snippet

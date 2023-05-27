@@ -151,7 +151,7 @@ updateVars vs =
 
 
 declareVoidFun : FunctionDecl -> CallStack -> CallStack
-declareVoidFun (Decl f _ body) =
+declareVoidFun (Decl (VoidFunction f) _ body) =
     updateTopFrame <|
         \frame ->
             let

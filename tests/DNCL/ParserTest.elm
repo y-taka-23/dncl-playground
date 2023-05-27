@@ -2146,35 +2146,35 @@ suite =
                             """ 関数 和を表示する () を
                                 と定義する
                             """
-                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl (VoidFunction "和を表示する") [] [] ])
                 , test "parses a function with no params without space" <|
                     \_ ->
                         Parser.run dnclProgram
                             """ 関数 和を表示する()を
                                 と定義する
                             """
-                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl (VoidFunction "和を表示する") [] [] ])
                 , test "parses a function with no params with spaces" <|
                     \_ ->
                         Parser.run dnclProgram
                             """ 関数 和を表示する (  ) を
                                 と定義する
                             """
-                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [] [] ])
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl (VoidFunction "和を表示する") [] [] ])
                 , test "parses a function with a single param" <|
                     \_ ->
                         Parser.run dnclProgram
                             """ 関数 和を表示する (n) を
                                 と定義する
                             """
-                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ])
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "n" ] [] ])
                 , test "parses a function with a single param with spaces" <|
                     \_ ->
                         Parser.run dnclProgram
                             """ 関数 和を表示する ( n ) を
                                 と定義する
                             """
-                            |> Expect.equal (Result.Ok [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ])
+                            |> Expect.equal (Result.Ok [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "n" ] [] ])
                 , test "parses a function with multiple params" <|
                     \_ ->
                         Parser.run dnclProgram
@@ -2183,7 +2183,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "n", Param "m", Param "l" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "n", Param "m", Param "l" ] [] ]
                                 )
                 , test "parses a function with multiple params with spaces" <|
                     \_ ->
@@ -2193,7 +2193,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "n", Param "m", Param "l" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "n", Param "m", Param "l" ] [] ]
                                 )
                 , test "cannot parse a function of the ascii name" <|
                     \_ ->
@@ -2217,7 +2217,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "myParam" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "myParam" ] [] ]
                                 )
                 , test "parses a function of a param including numbers" <|
                     \_ ->
@@ -2227,7 +2227,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "x01" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "x01" ] [] ]
                                 )
                 , test "parses a function of a param including underscores" <|
                     \_ ->
@@ -2237,7 +2237,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "x_sum" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "x_sum" ] [] ]
                                 )
                 , test "parses a function of a param staring with an upper case" <|
                     \_ ->
@@ -2247,7 +2247,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "Param" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "Param" ] [] ]
                                 )
                 , test "cannot parse a function of a param staring with a number" <|
                     \_ ->
@@ -2272,7 +2272,7 @@ suite =
                             """
                             |> Expect.equal
                                 (Result.Ok
-                                    [ FunDecl <| Decl "和を表示する" [ Param "n" ] [] ]
+                                    [ FunDecl <| Decl (VoidFunction "和を表示する") [ Param "n" ] [] ]
                                 )
                 , test "parses a function of a single statement" <|
                     \_ ->
@@ -2284,7 +2284,7 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
                                     ]
@@ -2300,7 +2300,7 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0))
                                             , PrintLn (singleton (Var (Scalar "wa")))
@@ -2322,13 +2322,13 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0))
                                             , PrintLn (singleton (Var (Scalar "wa")))
                                             ]
                                     , FunDecl <|
-                                        Decl "積を表示する"
+                                        Decl (VoidFunction "積を表示する")
                                             [ Param "m" ]
                                             [ Assign (Scalar "seki") (Lit (NumberVal 0))
                                             , PrintLn (singleton (Var (Scalar "seki")))
@@ -2353,13 +2353,13 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0))
                                             , PrintLn (singleton (Var (Scalar "wa")))
                                             ]
                                     , FunDecl <|
-                                        Decl "積を表示する"
+                                        Decl (VoidFunction "積を表示する")
                                             [ Param "m" ]
                                             [ Assign (Scalar "seki") (Lit (NumberVal 0))
                                             , PrintLn (singleton (Var (Scalar "seki")))
@@ -2380,7 +2380,7 @@ suite =
                                 (Result.Ok
                                     [ Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
                                     , FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
                                     ]
@@ -2399,7 +2399,7 @@ suite =
                                 (Result.Ok
                                     [ Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
                                     , FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
                                     ]
@@ -2415,7 +2415,7 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
                                     , Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))
@@ -2435,7 +2435,7 @@ suite =
                             |> Expect.equal
                                 (Result.Ok
                                     [ FunDecl <|
-                                        Decl "和を表示する"
+                                        Decl (VoidFunction "和を表示する")
                                             [ Param "n" ]
                                             [ Assign (Scalar "wa") (Lit (NumberVal 0)) ]
                                     , Stmt <| Assign (Scalar "kosu") (Lit (NumberVal 0))

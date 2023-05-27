@@ -150,6 +150,12 @@ function =
         |= functionName
 
 
+voidFunction : Parser VoidFunction
+voidFunction =
+    succeed VoidFunction
+        |= functionName
+
+
 functionName : Parser Name
 functionName =
     succeed identity
@@ -666,13 +672,13 @@ parameterLoop acc =
 
 functionDecl : Parser FunctionDecl
 functionDecl =
-    succeed (\( n, ps ) proc -> Decl n ps proc)
+    succeed (\( fun, ps ) proc -> Decl fun ps proc)
         |= line
             (succeed Tuple.pair
                 |. symbol "関数"
                 |. symbol " "
                 |. blanks
-                |= functionName
+                |= voidFunction
                 |. blanks
                 |= roundBrackets parameterMany
                 |. blanks
