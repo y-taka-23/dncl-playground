@@ -77,6 +77,7 @@ type Statement
     | PostCheckLoop Procedure BoolExp
     | IncrementLoop Variable ArithExp ArithExp ArithExp Procedure
     | DecrementLoop Variable ArithExp ArithExp ArithExp Procedure
+    | Invoke VoidFunction (List ArithExp)
 
 
 type Parameter

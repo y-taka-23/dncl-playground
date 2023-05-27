@@ -547,11 +547,11 @@ suite =
                     \_ ->
                         Parser.run arithExp "{}"
                             |> Expect.equal (Result.Ok (Arr []))
-                , test "parses an array of a single nummeric element" <|
+                , test "parses an array of a single numeric element" <|
                     \_ ->
                         Parser.run arithExp "{0}"
                             |> Expect.equal (Result.Ok (Arr [ Lit (NumberVal 0) ]))
-                , test "parses an array of multiple nummeric elements" <|
+                , test "parses an array of multiple numeric elements" <|
                     \_ ->
                         Parser.run arithExp "{0，1，2}"
                             |> Expect.equal
@@ -1232,6 +1232,67 @@ suite =
                                         )
                                     )
                                 )
+                ]
+            , describe "invoke"
+                [ test "parses a invocation with a single value arg" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (0)"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Lit (NumberVal 0) ]))
+                , test "parses a invocation with a single scalar arg" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (x)"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Var (Scalar "x") ]))
+                , test "parses a invocation with a single array arg" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (MyArr[0])"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Invoke (VoidFunction "和を表示する")
+                                        [ Var (Array "MyArr" [ Lit (NumberVal 0) ]) ]
+                                    )
+                                )
+                , test "parses a invocation with multiple value args" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (0，1)"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
+                , test "parses a invocation with multiple scalar args" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (x，y)"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Var (Scalar "x"), Var (Scalar "y") ]))
+                , test "parses a invocation with multiple array args" <|
+                    \_ ->
+                        Parser.run statement "和を表示する (MyArr[0]，MyArr[1])"
+                            |> Expect.equal
+                                (Result.Ok
+                                    (Invoke (VoidFunction "和を表示する")
+                                        [ Var (Array "MyArr" [ Lit (NumberVal 0) ])
+                                        , Var (Array "MyArr" [ Lit (NumberVal 1) ])
+                                        ]
+                                    )
+                                )
+                , test "parses a invocation without a space" <|
+                    \_ ->
+                        Parser.run statement "和を表示する(0)"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Lit (NumberVal 0) ]))
+                , test "parses a invocation with optional spaces" <|
+                    \_ ->
+                        Parser.run statement "和を表示する ( 0， 1 )"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") [ Lit (NumberVal 0), Lit (NumberVal 1) ]))
+                , test "parses a invocation without args" <|
+                    \_ ->
+                        Parser.run statement "和を表示する ()"
+                            |> Expect.equal
+                                (Result.Ok (Invoke (VoidFunction "和を表示する") []))
+                , test "cannot parse a invocation of an ascii name" <|
+                    \_ ->
+                        Parser.run statement "square (0)"
+                            |> Expect.err
                 ]
             , describe "if"
                 [ test "parses if statement with empty body" <|

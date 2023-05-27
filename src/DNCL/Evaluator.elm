@@ -8,6 +8,7 @@ module DNCL.Evaluator exposing
     )
 
 import DNCL.AST exposing (..)
+import Debug
 import Dict exposing (Dict)
 import List.Nonempty as Nonempty exposing (Nonempty)
 import Result.Extra as Result
@@ -319,6 +320,9 @@ step ev =
 
                         Ok vs ->
                             Ok <| Continued { ev | callStack = prependProc [ stmt ] <| updateVars vs stack }
+
+        Just ( Stmt (Invoke _ _), _, _ ) ->
+            Debug.todo "Invoke"
 
         Just ( FunDecl decl, _, stack ) ->
             Ok <| Continued { ev | callStack = declareVoidFun decl stack }

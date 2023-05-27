@@ -32,7 +32,7 @@ import Parser
         , symbol
         , variable
         )
-import Set
+import Set exposing (Set)
 
 
 parse : SourceCode -> Maybe DNCLProgram
@@ -43,6 +43,38 @@ parse code =
 
         Err _ ->
             Nothing
+
+
+reserved : Set String
+reserved =
+    Set.fromList
+        [ "と"
+        , "を表示する"
+        , "を改行なしで表示する"
+        , "改行を表示する"
+        , "増やす"
+        , "減らす"
+        , "かつ"
+        , "または"
+        , "でない"
+        , "もし"
+        , "ならば"
+        , "を実行し，そうでなければ"
+        , "を実行する"
+        , "の間，"
+        , "を繰り返す"
+        , "繰り返し，"
+        , "を，"
+        , "になるまで実行する"
+        , " を"
+        , "から"
+        , "まで"
+        , "ずつ増やしながら，"
+        , "ずつ減らしながら，"
+        , "を繰り返す"
+        , "関数"
+        , "と定義する"
+        ]
 
 
 variable_ : Parser Variable
@@ -59,7 +91,7 @@ scalar =
         |= variable
             { start = Char.isLower
             , inner = \c -> Char.isAlphaNum c || (c == '_')
-            , reserved = Set.empty
+            , reserved = reserved
             }
 
 
@@ -69,7 +101,7 @@ constOrArray =
         |= variable
             { start = Char.isUpper
             , inner = \c -> Char.isAlphaNum c || (c == '_')
-            , reserved = Set.empty
+            , reserved = reserved
             }
         |= oneOf
             [ squareBrackets (lazy (\_ -> arithExpMany1))
@@ -122,7 +154,7 @@ stringValJa =
             [ variable
                 { start = \c -> c /= '」'
                 , inner = \c -> c /= '」'
-                , reserved = Set.empty
+                , reserved = reserved
                 }
             , succeed ""
             ]
@@ -137,7 +169,7 @@ stringValEn =
             [ variable
                 { start = \c -> c /= '"'
                 , inner = \c -> c /= '"'
-                , reserved = Set.empty
+                , reserved = reserved
                 }
             , succeed ""
             ]
@@ -162,7 +194,7 @@ functionName =
         |= variable
             { start = \c -> Char.toCode c > 0x7F
             , inner = \c -> Char.toCode c > 0x7F
-            , reserved = Set.empty
+            , reserved = reserved
             }
 
 
@@ -401,6 +433,7 @@ lineStatement =
         , printNewLine
         , increment
         , decrement
+        , invoke
         ]
 
 
@@ -484,6 +517,14 @@ decrement =
         |= backtrackable arithExp
         |. backtrackable blanks
         |. symbol "減らす"
+
+
+invoke : Parser Statement
+invoke =
+    succeed Invoke
+        |= backtrackable voidFunction
+        |. blanks
+        |= roundBrackets arithExpMany
 
 
 line : Parser a -> Parser a
@@ -639,7 +680,7 @@ parameter =
         |= variable
             { start = Char.isAlpha
             , inner = \c -> Char.isAlphaNum c || (c == '_')
-            , reserved = Set.empty
+            , reserved = reserved
             }
 
 
