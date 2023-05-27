@@ -46,7 +46,7 @@ type alias Functions =
 
 
 type alias VoidFunctions =
-    Dict Name Procedure
+    Dict Name ( List Parameter, Procedure )
 
 
 type alias FunctionDef =
@@ -152,7 +152,7 @@ updateVars vs =
 
 
 declareVoidFun : FunctionDecl -> CallStack -> CallStack
-declareVoidFun (Decl (VoidFunction f) _ body) =
+declareVoidFun (Decl (VoidFunction f) params body) =
     updateTopFrame <|
         \frame ->
             let
@@ -160,7 +160,7 @@ declareVoidFun (Decl (VoidFunction f) _ body) =
                     frame.symbolTable
 
                 updated =
-                    { st | voidFunctions = Dict.insert f body st.voidFunctions }
+                    { st | voidFunctions = Dict.insert f ( params, body ) st.voidFunctions }
             in
             { frame | symbolTable = updated }
 

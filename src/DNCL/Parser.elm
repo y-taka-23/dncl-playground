@@ -27,6 +27,7 @@ import Parser
         , loop
         , map
         , oneOf
+        , problem
         , run
         , succeed
         , symbol
@@ -676,12 +677,39 @@ decrementLoop =
 
 parameter : Parser Parameter
 parameter =
-    succeed Param
+    oneOf
+        [ scalarParam
+        , arrayParam
+        ]
+
+
+scalarParam : Parser Parameter
+scalarParam =
+    succeed ScalarParam
         |= variable
-            { start = Char.isAlpha
+            { start = Char.isLower
             , inner = \c -> Char.isAlphaNum c || (c == '_')
             , reserved = reserved
             }
+
+
+arrayParam : Parser Parameter
+arrayParam =
+    variable
+        { start = Char.isUpper
+        , inner = \c -> Char.isAlphaNum c || (c == '_')
+        , reserved = reserved
+        }
+        |> andThen arrayOrErr
+
+
+arrayOrErr : Name -> Parser Parameter
+arrayOrErr x =
+    if String.all Char.isUpper x then
+        problem <| "constant " ++ x ++ " is used as a parameter"
+
+    else
+        succeed <| ArrayParam x
 
 
 parameterMany1 : Parser (List Parameter)

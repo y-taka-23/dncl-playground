@@ -81,7 +81,8 @@ type Statement
 
 
 type Parameter
-    = Param Name
+    = ScalarParam Name
+    | ArrayParam Name
 
 
 type FunctionDecl
