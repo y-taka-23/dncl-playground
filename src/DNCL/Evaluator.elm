@@ -8,9 +8,9 @@ module DNCL.Evaluator exposing
     )
 
 import DNCL.AST exposing (..)
-import Debug
 import Dict exposing (Dict)
 import List.Nonempty as Nonempty exposing (Nonempty)
+import Maybe.Extra as Maybe
 import Result.Extra as Result
 
 
@@ -76,6 +76,7 @@ type StepResult
 type Exception
     = UndefinedVariable Variable
     | UndefinedFunction Function
+    | UndefinedVoidFunction VoidFunction
     | ConstReassignment Variable
     | InvalidArrayAssignment Variable
     | NonNumericArrayIndex Value
@@ -83,6 +84,7 @@ type Exception
     | ZeroDivision
     | UnsupportedOperation
     | InvalidArgument (List Value)
+    | SignatureMismatch (List Parameter) (List Value)
     | UnreachableBranch String
 
 
@@ -171,6 +173,51 @@ prependProc proc =
         \frame ->
             -- TODO: List concatination looks show
             { frame | continuation = List.map Stmt proc ++ frame.continuation }
+
+
+bindArgs : List Parameter -> List Value -> Maybe Variables
+bindArgs params args =
+    let
+        match param val =
+            case ( param, val ) of
+                ( ScalarParam x, NumberVal v ) ->
+                    Just ( x, val )
+
+                ( ScalarParam x, StringVal v ) ->
+                    Just ( x, val )
+
+                ( ArrayParam x, ArrayVal v ) ->
+                    Just ( x, val )
+
+                _ ->
+                    Nothing
+    in
+    if List.length params == List.length args then
+        Maybe.map Dict.fromList <| Maybe.combine <| List.map2 match params args
+
+    else
+        Nothing
+
+
+invokeVoidFun : Variables -> Procedure -> CallStack -> CallStack
+invokeVoidFun vs body stack =
+    case stack of
+        [] ->
+            -- Unreachable
+            []
+
+        frame :: frames ->
+            let
+                newTable =
+                    { variables = vs
+                    , functions = frame.symbolTable.functions
+                    , voidFunctions = frame.symbolTable.voidFunctions
+                    }
+
+                newFrame =
+                    { continuation = List.map Stmt body, symbolTable = newTable }
+            in
+            newFrame :: frame :: frames
 
 
 step : Evaluator -> Result Exception StepResult
@@ -321,8 +368,21 @@ step ev =
                         Ok vs ->
                             Ok <| Continued { ev | callStack = prependProc [ stmt ] <| updateVars vs stack }
 
-        Just ( Stmt (Invoke _ _), _, _ ) ->
-            Debug.todo "Invoke"
+        Just ( Stmt (Invoke (VoidFunction f) aexps), st, stack ) ->
+            case ( evalArgs st aexps, Dict.get f st.voidFunctions ) of
+                ( Err e, _ ) ->
+                    Err e
+
+                ( _, Nothing ) ->
+                    Err <| UndefinedVoidFunction <| VoidFunction f
+
+                ( Ok args, Just ( params, body ) ) ->
+                    case bindArgs params args of
+                        Nothing ->
+                            Err <| SignatureMismatch params args
+
+                        Just vs ->
+                            Ok <| Continued { ev | callStack = invokeVoidFun vs body stack }
 
         Just ( FunDecl decl, _, stack ) ->
             Ok <| Continued { ev | callStack = declareVoidFun decl stack }
@@ -468,6 +528,11 @@ evalIndices st aexps =
                             Err val
             in
             Result.mapError NonNumericArrayIndex <| Result.combineMap toIndex vals
+
+
+evalArgs : SymbolTable -> List ArithExp -> Result Exception (List Value)
+evalArgs st aexps =
+    Result.combineMap (evalArith st) aexps
 
 
 evalArith : SymbolTable -> ArithExp -> Result Exception Value

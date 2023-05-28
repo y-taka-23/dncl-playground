@@ -19,6 +19,11 @@ runStatements =
     eval << load << List.map Stmt
 
 
+runProgram : DNCLProgram -> Result Exception (List String)
+runProgram =
+    eval << load
+
+
 eval : Evaluator -> Result Exception (List String)
 eval ev =
     case step ev of
@@ -1716,5 +1721,202 @@ suite =
                             ]
                             |> Expect.equal (Result.Err (InvalidArgument [ StringVal "0" ]))
                 ]
+            ]
+        , describe "function invocation"
+            [ test "invokes an user defined function for number args" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "和を表示する")
+                                [ ScalarParam "x", ScalarParam "y" ]
+                                [ PrintLn (singleton (Plus (Var (Scalar "x")) (Var (Scalar "y"))))
+                                ]
+                        , Stmt <| Invoke (VoidFunction "和を表示する") [ Lit (NumberVal 2), Lit (NumberVal 3) ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "5" ])
+            , test "invokes an user defined function for string args" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "連結して表示する")
+                                [ ScalarParam "x", ScalarParam "y" ]
+                                [ PrintLn (Nonempty (Var (Scalar "x")) [ Var (Scalar "y") ])
+                                ]
+                        , Stmt <| Invoke (VoidFunction "連結して表示する") [ Lit (StringVal "fizz"), Lit (StringVal "buzz") ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "fizzbuzz" ])
+            , test "invokes an user defined function for array args" <|
+                \_ ->
+                    let
+                        arr1 =
+                            ArrayVal <| Dict.fromList [ ( 0, NumberVal 2 ) ]
+
+                        arr2 =
+                            ArrayVal <| Dict.fromList [ ( 0, NumberVal 3 ) ]
+                    in
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "先頭の和を表示する")
+                                [ ArrayParam "Arr1", ArrayParam "Arr2" ]
+                                [ PrintLn
+                                    (singleton
+                                        (Plus
+                                            (Var (Array "Arr1" [ Lit (NumberVal 0) ]))
+                                            (Var (Array "Arr2" [ Lit (NumberVal 0) ]))
+                                        )
+                                    )
+                                ]
+                        , Stmt <| Invoke (VoidFunction "先頭の和を表示する") [ Lit arr1, Lit arr2 ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "5" ])
+            , test "throws an exeption a number arg is given for an array param" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ArrayParam "Arr" ]
+                                [ PrintLn (singleton (Var (Array "Arr" []))) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") [ Lit (NumberVal 0) ]
+                        ]
+                        |> Expect.equal (Result.Err (SignatureMismatch [ ArrayParam "Arr" ] [ NumberVal 0 ]))
+            , test "throws an exeption a string arg is given for an array param" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ArrayParam "Arr" ]
+                                [ PrintLn (singleton (Var (Array "Arr" []))) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") [ Lit (StringVal "hello") ]
+                        ]
+                        |> Expect.equal (Result.Err (SignatureMismatch [ ArrayParam "Arr" ] [ StringVal "hello" ]))
+            , test "throws an exeption an array arg is given for a scalar param" <|
+                \_ ->
+                    let
+                        arr =
+                            ArrayVal <| Dict.fromList [ ( 0, NumberVal 2 ) ]
+                    in
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") [ Lit arr ]
+                        ]
+                        |> Expect.equal (Result.Err (SignatureMismatch [ ScalarParam "x" ] [ arr ]))
+            , test "throws an exception if the function is not declared at invocation" <|
+                \_ ->
+                    runProgram
+                        [ Stmt <| Invoke (VoidFunction "表示する") [ Lit (NumberVal 0) ]
+                        , FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        ]
+                        |> Expect.equal (Result.Err (UndefinedVoidFunction (VoidFunction "表示する")))
+            , test "invokes nested functions" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        , FunDecl <|
+                            Decl (VoidFunction "二回表示する")
+                                [ ScalarParam "y" ]
+                                [ Invoke (VoidFunction "表示する") [ Var (Scalar "y") ]
+                                , Invoke (VoidFunction "表示する") [ Var (Scalar "y") ]
+                                ]
+                        , Stmt <| Invoke (VoidFunction "二回表示する") [ Lit (NumberVal 0) ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "0", "0" ])
+            , test "invokes nested functions even if the inner is declared after" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "二回表示する")
+                                [ ScalarParam "y" ]
+                                [ Invoke (VoidFunction "表示する") [ Var (Scalar "y") ]
+                                , Invoke (VoidFunction "表示する") [ Var (Scalar "y") ]
+                                ]
+                        , FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        , Stmt <| Invoke (VoidFunction "二回表示する") [ Lit (NumberVal 0) ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "0", "0" ])
+            , test "invokes a recursive function" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "再帰的に表示する")
+                                [ ScalarParam "x" ]
+                                [ If (Gt (Var (Scalar "x")) (Lit (NumberVal 0)))
+                                    [ PrintLn (singleton (Var (Scalar "x")))
+                                    , Invoke (VoidFunction "再帰的に表示する")
+                                        [ Minus (Var (Scalar "x")) (Lit (NumberVal 1)) ]
+                                    ]
+                                ]
+                        , Stmt <| Invoke (VoidFunction "再帰的に表示する") [ Lit (NumberVal 3) ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "1", "2", "3" ])
+            , test "can use built-in funcions in functions" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "二乗を表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Fun (Function "二乗") [ Var (Scalar "x") ])) ]
+                        , Stmt <| Invoke (VoidFunction "二乗を表示する") [ Lit (NumberVal 3) ]
+                        ]
+                        |> Expect.equal (Result.Ok [ "9" ])
+            , test "cannot access vars outside of the function" <|
+                \_ ->
+                    runProgram
+                        [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 42))
+                        , FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                []
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") []
+                        ]
+                        |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
+            , test "cannot access vars inside of the function" <|
+                \_ ->
+                    runProgram
+                        [ FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                []
+                                [ Assign (Scalar "x") (Lit (NumberVal 42)) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") []
+                        , Stmt <| PrintLn (singleton (Var (Scalar "x")))
+                        ]
+                        |> Expect.equal (Result.Err (UndefinedVariable (Scalar "x")))
+            , test "shadows vars outside of the function by assignment" <|
+                \_ ->
+                    runProgram
+                        [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 0))
+                        , FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                []
+                                [ Assign (Scalar "x") (Lit (NumberVal 42))
+                                , PrintLn (singleton (Var (Scalar "x")))
+                                ]
+                        , Stmt <| Invoke (VoidFunction "表示する") []
+                        , Stmt <| PrintLn (singleton (Var (Scalar "x")))
+                        ]
+                        |> Expect.equal (Result.Ok [ "0", "42" ])
+            , test "shadows vars outside of the function by args" <|
+                \_ ->
+                    runProgram
+                        [ Stmt <| Assign (Scalar "x") (Lit (NumberVal 0))
+                        , FunDecl <|
+                            Decl (VoidFunction "表示する")
+                                [ ScalarParam "x" ]
+                                [ PrintLn (singleton (Var (Scalar "x"))) ]
+                        , Stmt <| Invoke (VoidFunction "表示する") [ Lit (NumberVal 42) ]
+                        , Stmt <| PrintLn (singleton (Var (Scalar "x")))
+                        ]
+                        |> Expect.equal (Result.Ok [ "0", "42" ])
             ]
         ]
