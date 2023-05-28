@@ -61,7 +61,7 @@ type alias Model =
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { sourceCode = pastExam2023
+    ( { sourceCode = pastExam2022
       , log = []
       , execState = Stopped
       }
@@ -78,7 +78,7 @@ type Msg
 
 timeoutSeconds : Int
 timeoutSeconds =
-    5
+    10
 
 
 stepIntervalMillis : Float
