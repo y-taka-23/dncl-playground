@@ -35,6 +35,7 @@ import Element
         , row
         , scrollbarY
         , spacing
+        , text
         , width
         )
 import Element.Background as Background
@@ -242,7 +243,7 @@ header =
             , centerY
             ]
         <|
-            Element.text "DNCL Playground"
+            text "DNCL Playground"
 
 
 inputPanel : Model -> Element Msg
@@ -307,7 +308,7 @@ toolbar =
             , Font.center
             ]
             { onPress = Just TriggerProgram
-            , label = Element.text "実行"
+            , label = text "実行"
             }
 
 
@@ -331,7 +332,7 @@ logPanel log =
             ]
           <|
             el [ centerY ] <|
-                Element.text "出力"
+                text "出力"
         , column
             [ width fill
             , height fill
@@ -342,7 +343,7 @@ logPanel log =
             , monospace
             ]
           <|
-            List.map Element.text <|
+            List.map text <|
                 List.reverse log
         ]
 
